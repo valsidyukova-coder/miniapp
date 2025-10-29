@@ -1,0 +1,6 @@
+{
+  "build": {
+    "env": {},
+    "ignoreCommand": "echo 'Skipping build'"
+  }
+}
