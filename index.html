@@ -1,0 +1,3688 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>TRBE — Team Mini App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+  :root{
+    --bg-1:#0b0a0d; --bg-2:#131017;
+    --text:#EDEAF5; --muted:#B9B4C8;
+    --stroke:rgba(255,255,255,.12);
+    --radius:16px; --radius-lg:18px;
+    --shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.03);
+    --accent-1:#b142b4; --accent-2:#c27bff;
+    --glass:rgba(255,255,255,.06);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text); font-family:"Manrope",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    -webkit-font-smoothing:antialiased;
+    background-attachment: fixed;
+    background-image:
+      radial-gradient(1200px 800px at 20% -10%, rgba(177,66,180,.22), transparent 60%),
+      radial-gradient(1100px 700px at 90% 0%,   rgba(194,123,255,.18), transparent 55%),
+      radial-gradient(1400px 900px at 80% 120%, rgba(177,66,180,.16), transparent 60%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    background-blend-mode: screen, screen, screen, normal;
+    padding:18px 16px max(28px, calc(env(safe-area-inset-bottom) + 90px));
+  }
+
+  .wrap{max-width:1100px; margin:0 auto;}
+
+   /* Lock screen */
+  #lock-screen,
+  .lock-overlay{
+    position:fixed;
+    inset:0;
+    z-index:5000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:clamp(20px, 6vh, 48px) clamp(16px, 6vw, 48px);
+    background:rgba(10,8,14,.82);
+    backdrop-filter:blur(24px);
+    transition:opacity .3s ease, visibility .3s ease;
+  }
+  #lock-screen[aria-hidden="true"],
+  .lock-overlay[aria-hidden="true"],
+  .lock-overlay.hidden{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .lock-shell,
+  .lock-container{
+    width:min(380px, 94vw);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+    padding:32px clamp(20px, 6vw, 32px);
+    border-radius:28px;
+    background:rgba(23,19,29,.75);
+    border:1px solid var(--stroke);
+    box-shadow:var(--shadow);
+    backdrop-filter:blur(18px);
+    transition:transform .3s ease;
+  }
+  #lock-screen[aria-hidden="true"] .lock-shell,
+  .lock-overlay[aria-hidden="true"] .lock-shell,
+  .lock-overlay.hidden .lock-shell{
+    transform:translateY(16px);
+  }
+  .lock-shell.lock-shake,
+  .lock-container.shake{
+    animation:lockShake .32s ease;
+  }
+  .lock-header{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    text-align:center;
+  }
+  .lock-logo{
+    font-weight:800;
+    font-size:18px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    padding:8px 18px;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    box-shadow:0 16px 32px rgba(177,66,180,.35), inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  .lock-title{
+    margin:0;
+    font-size:22px;
+    font-weight:800;
+  }
+  .lock-subtitle{
+    margin:0;
+    font-size:14px;
+    color:var(--muted);
+  }
+  .lock-pin-indicators,
+  .pin-indicators{
+    display:flex;
+    gap:14px;
+    justify-content:center;
+  }
+  .lock-pin-indicator,
+  .pin-indicator{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.28);
+    background:rgba(255,255,255,.08);
+    transition:background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+  .lock-pin-indicator.filled,
+  .pin-indicator.filled{
+    background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    border-color:transparent;
+    transform:scale(1.14);
+    box-shadow:0 0 14px rgba(194,123,255,.45);
+  }
+  .lock-keypad,
+  .keypad{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:14px;
+  }
+  .lock-key{
+    appearance:none;
+    border:0;
+    font:inherit;
+    font-weight:700;
+    font-size:20px;
+    color:var(--text);
+    background:rgba(255,255,255,.08);
+    border-radius:18px;
+    padding:16px 0;
+    text-align:center;
+    cursor:pointer;
+    box-shadow:var(--shadow);
+    transition:filter .15s ease, transform .1s ease;
+  }
+  .lock-key:hover{filter:brightness(1.08);}
+  .lock-key:active{transform:translateY(1px);}
+  .lock-key:focus-visible{
+    outline:2px solid rgba(194,123,255,.55);
+    outline-offset:3px;
+  }
+  .lock-key.lock-action{
+    background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    font-size:17px;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+  }
+  .lock-key.lock-control{
+    font-size:18px;
+  }
+  #lock-screen.lock-busy .lock-key,
+  .lock-overlay.lock-busy .lock-key{
+    pointer-events:none;
+    opacity:.7;
+  }
+  #lock-screen.lock-busy .lock-key.lock-action,
+  .lock-overlay.lock-busy .lock-key.lock-action{
+    filter:saturate(.8);
+  }
+    .shake{
+    animation:lockShake .32s ease;
+  }
+  @keyframes lockShake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-12px);}
+    40%{transform:translateX(12px);}
+    60%{transform:translateX(-8px);}
+    80%{transform:translateX(8px);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    #lock-screen,
+    .lock-overlay{transition:none;}
+    .lock-shell,
+    .lock-container{transition:none;}
+    .lock-shell.lock-shake,
+    .lock-container.shake,
+    .shake{animation:none;}
+  }
+  @media (max-width:480px){
+    .lock-shell{
+      gap:20px;
+      padding:28px 22px;
+    }
+    .lock-title{font-size:20px;}
+    .lock-key{font-size:19px;}
+  }
+    
+  /* Hero */
+  .hero{display:grid; gap:8px; margin:6px 0 18px; text-align:center;}
+  .pill{
+    display:inline-block; font-size:12px; color:var(--muted);
+    border:1px solid var(--stroke); border-radius:999px; padding:6px 10px;
+    backdrop-filter:blur(10px);
+    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+  }
+  h1{font-size:clamp(28px,4.8vw,44px); line-height:1.05; margin:2px 0 0; font-weight:800; letter-spacing:-.5px}
+  .gradient{background:linear-gradient(90deg, var(--accent-1), var(--accent-2)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+  .motd{color:var(--muted); font-size:14px; margin-top:4px}
+
+  /* Landing */
+  .three-grid{display:grid; gap:14px; grid-template-columns:1fr; margin:16px 0 8px}
+  @media (min-width:860px){ .three-grid{grid-template-columns:repeat(3,1fr)} }
+  .tile{
+    display:flex; gap:10px; align-items:center; justify-content:center;
+    background:var(--glass); border:1px solid var(--stroke); border-radius:24px;
+    box-shadow:var(--shadow); padding:26px; cursor:pointer; text-align:center;
+    transition: transform .05s ease, filter .15s ease;
+  }
+  .tile:hover{ filter:brightness(1.06) } .tile:active{ transform:translateY(1px) }
+  .tile h2{ margin:0; font-size:18px; font-weight:800 }
+
+  /* Panels & cards */
+  .panel{ display:none; margin-top:16px; }
+  .card-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .card-header h3{
+    margin:0;
+  }
+  .back{
+    appearance:none; border:0; color:#fff; font-weight:800;
+    padding:10px 16px; border-radius:12px; cursor:pointer;
+    background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    box-shadow:0 8px 20px rgba(177,66,180,.28), inset 0 1px 0 rgba(255,255,255,.12);
+    white-space:nowrap;
+    font-size:13px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+    flex-shrink:0;
+  }
+  .card{
+    background:var(--glass); border:1px solid var(--stroke); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow); padding:14px; margin-bottom:14px; backdrop-filter: blur(8px);
+  }
+  .card h3{font-size:16px; margin:0 0 10px; font-weight:800}
+  .hint{color:var(--muted); font-size:12px}
+
+  .toolbar{display:grid; gap:10px; grid-template-columns:1fr; margin-bottom:10px}
+  @media (min-width:700px){ .toolbar{grid-template-columns: 1fr 260px} }
+    
+    .dashboard-filters{
+    display:flex;
+    flex-wrap:wrap;
+    column-gap:12px;
+    row-gap:10px;
+    align-items:stretch;
+    margin:4px 0 12px;
+  }
+  .dashboard-filter-item{
+    flex:1 1 clamp(180px, 33%, 280px);
+    min-width:160px;
+    display:flex;
+  }
+  .dashboard-filter-item > *{
+    width:100%;
+    min-height:46px;
+  }
+  @media (max-width:520px){
+    .dashboard-filter-item{
+      flex:1 1 calc(50% - 12px);
+      min-width:150px;
+    }
+  }
+    @media (max-width:400px){
+    .dashboard-filter-item{
+      flex:1 1 100%;
+      min-width:0;
+    }
+  }
+
+
+  input, textarea, select{
+    width:100%; color:var(--text);
+    background:rgba(255,255,255,.04); border:1px solid var(--stroke);
+    border-radius:12px; padding:12px 14px; outline:none;
+  }
+  textarea{min-height:110px; resize:vertical}
+
+  .btn{
+    appearance:none; border:0; color:#fff; font-weight:800;
+    padding:14px 16px; border-radius:16px; cursor:pointer;
+    background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    box-shadow:0 8px 20px rgba(177,66,180,.28), inset 0 1px 0 rgba(255,255,255,.12);
+    transition:transform .05s ease, filter .15s ease; white-space:nowrap;
+  }
+  .btn:hover{filter:brightness(1.06)} .btn:active{transform:translateY(1px)}
+  .btn.secondary{
+    background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+    color:var(--text);
+  }
+  .btn.mini{padding:9px 12px; font-size:13px; border-radius:12px}
+  .btn:disabled{opacity:.6; filter:grayscale(40%)}
+
+    /* Modal */
+  .modal-backdrop{
+    position:fixed; inset:0; z-index:4500;
+    display:none; align-items:center; justify-content:center;
+    background:rgba(9,7,12,.82);
+  }
+  .modal-backdrop[aria-hidden="false"]{display:flex}
+  .modal-card{
+    width:min(420px, 94vw);
+    background:#201a2a;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:20px;
+    box-shadow:0 20px 48px rgba(0,0,0,.55);
+    padding:20px;
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .modal-card h3{margin:0; font-size:18px; font-weight:800}
+  .modal-field{display:flex; flex-direction:column; gap:6px}
+  .modal-label{font-size:13px; font-weight:600; color:var(--muted)}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px}
+  .modal-actions .btn{min-width:120px}
+  .modal-actions .btn.secondary{min-width:auto}
+  .modal-status{font-size:13px; min-height:18px}
+  .modal-status.loading{color:var(--muted)}
+  .modal-status.error{color:#ff8a9f}
+  .modal-status.success{color:#96f6c7}
+    
+    /* Tasks */
+  .task-list{list-style:none; padding:0; margin:8px 0 0; display:flex; flex-direction:column; gap:8px}
+  .task-item{display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid var(--stroke); border-radius:12px; background:rgba(255,255,255,.04)}
+  .task-item.completed{opacity:.7}
+  .task-item label{display:flex; gap:10px; width:100%; cursor:pointer}
+  .task-item span{flex:1}
+  .task-check{margin-top:2px; width:18px; height:18px; accent-color:var(--accent-2)}
+  .task-meta{font-size:12px; color:var(--muted); margin-top:4px}
+  .task-empty{padding:12px; border:1px dashed rgba(255,255,255,.12); border-radius:12px; color:var(--muted); text-align:center; font-size:13px}
+  .assign-task-toolbar{margin-bottom:8px}
+  .assign-task-side{display:grid; gap:8px}
+  .assign-task-side .btn{width:100%}
+  @media (min-width:700px){ .assign-task-toolbar{grid-template-columns:1fr 220px} }
+    
+  /* Chats list (dashboard) */
+  .list{list-style:none; padding:0; margin:8px 0 0; border:1px solid var(--stroke); border-radius:12px; overflow:hidden}
+  .row{
+    display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+    padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03);
+    cursor:pointer;
+  }
+  .row:hover{background:rgba(255,255,255,.07)}
+  .row:last-child{border-bottom:0}
+  .title{font-weight:700}
+  .sub{font-size:12px; color:var(--muted)}
+  .status-pill{
+    padding:6px 10px; border-radius:999px;
+    background:linear-gradient(90deg, var(--accent-1), var(--accent-2));
+    font-size:11px; font-weight:800; letter-spacing:.2px; justify-self:end;
+  }
+    .status-stack{
+    display:flex;
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    text-align:right;
+  }
+  .grant-pill{
+    font-size:13px; font-weight:600; padding:6px 10px; border-radius:999px;
+    background:linear-gradient(90deg,var(--accent-1),var(--accent-2));
+    color:white; display:inline-block;
+  }
+
+  .mini-tool{
+    margin-top:10px;
+    padding:12px;
+    border:1px solid var(--stroke);
+    border-radius:12px;
+    background:rgba(255,255,255,0.02);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .mini-tool:first-child{margin-top:0;}
+  .mini-tool label{font-size:13px; font-weight:700; color:var(--muted);}
+  .mini-actions{display:flex; justify-content:flex-end; gap:10px;}
+  .mini-actions .btn{min-width:110px;}
+
+  pre.out{background:rgba(0,0,0,.35); border:1px solid var(--stroke); border-radius:12px; padding:12px; margin:10px 0 0; white-space:pre-wrap; max-height:280px; overflow:auto}
+    .ai-response-box{
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--stroke);
+    border-radius:12px;
+    padding:12px;
+    font:inherit;
+    color:var(--text);
+    white-space:pre-wrap;
+    word-break:break-word;
+    max-height:280px;
+    overflow:auto;
+  }
+  .section-title{font-weight:800; margin:10px 0 8px}
+
+  /* Timelines */
+  .timeline{border:1px dashed rgba(255,255,255,.25); border-radius:12px; padding:12px; color:var(--muted)}
+  .timeline .bar{height:12px; border-radius:999px; background:linear-gradient(90deg, var(--accent-1), var(--accent-2)); margin:8px 0 4px}
+
+  /* Accordion */
+  .acc{border:1px solid var(--stroke); border-radius:12px; overflow:hidden; margin-top:8px}
+  .acc-item + .acc-item{border-top:1px solid var(--stroke)}
+  .acc-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; cursor:pointer; background:rgba(255,255,255,.04)}
+  .acc-head h4{margin:0; font-size:16px}
+  .acc-body{display:none; padding:12px 14px; background:rgba(255,255,255,.03)}
+  .chev{transition:transform .15s ease}
+  .acc-item.open .acc-body{display:block}
+  .acc-item.open .chev{transform:rotate(180deg)}
+
+  /* -------- Full-screen chooser (Select chats) -------- */
+  .chooser-full{
+    position:fixed; inset:0; z-index:3000;
+    display:none; flex-direction:column; align-items:center;
+    background:linear-gradient(180deg, #15111c, #0f0d14);
+  }
+  .chooser-full[aria-hidden="false"]{display:flex}
+
+  .chooser-shell{
+    width:min(900px, 98vw);
+    height:min(96vh, 100%);
+    margin:clamp(8px, 2vh, 18px) 0;
+    background:#1b1623; border:1px solid var(--stroke); border-radius:20px;
+    box-shadow:0 20px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  .chooser-top{
+    position:sticky; top:0; z-index:1;
+    display:grid; gap:10px; grid-template-columns:1fr 220px auto auto;
+    padding:12px; background:#1b1623; border-bottom:1px solid var(--stroke);
+  }
+  .chooser-title{align-self:center; font-weight:800}
+  .chooser-list{
+    list-style:none; margin:0; padding:0;
+    overflow:auto; flex:1; -webkit-overflow-scrolling:touch;
+  }
+  .chooser-row{
+    display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center;
+    padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02);
+  }
+  .chooser-row:hover{background:rgba(255,255,255,.06)}
+  .chooser-row:last-child{border-bottom:0}
+  .send-tick{ width:18px; height:18px; accent-color:#c27bff }
+
+  /* Final confirm popup (unchanged) */
+  .chooser-backdrop{
+      position: fixed; inset: 0;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(10,8,14,.85);  /* opaque-ish dark backdrop */
+      z-index: 4000;
+  }
+  .chooser-card{
+      width: min(720px, 96vw);
+      background: #201a2a;                     /* solid background */
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.6);
+      padding: 14px;
+      backdrop-filter: none;                    /* kill the blur */
+  }
+
+  /* Chips for selected chats */
+  #sendChosenChips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; border-radius:999px;
+    background:rgba(255,255,255,.08); border:1px solid var(--stroke);
+    font-size:12px;
+  }
+  .chip .x{
+    display:inline-block; width:16px; height:16px; line-height:16px; text-align:center;
+    border-radius:50%; background:rgba(255,255,255,.18); cursor:pointer; font-weight:800;
+  }
+  </style>
+</head>
+<body>
+  <div id="lock-screen" class="lock-overlay" aria-hidden="false">
+    <div class="lock-shell lock-container" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+      <div class="lock-header">
+        <div class="lock-logo">TRBE</div>
+        <p id="lockTitle" class="lock-title">Team Mini App</p>
+        <p class="lock-subtitle">Enter your access PIN to continue</p>
+      </div>
+      <div class="lock-pin-indicators pin-indicators" aria-hidden="true">
+        <span class="lock-pin-indicator pin-indicator"></span>
+        <span class="lock-pin-indicator pin-indicator"></span>
+        <span class="lock-pin-indicator pin-indicator"></span>
+        <span class="lock-pin-indicator pin-indicator"></span>
+      </div>
+      <div class="lock-keypad keypad" data-keypad>
+        <button type="button" class="lock-key" data-key="1">1</button>
+        <button type="button" class="lock-key" data-key="2">2</button>
+        <button type="button" class="lock-key" data-key="3">3</button>
+        <button type="button" class="lock-key" data-key="4">4</button>
+        <button type="button" class="lock-key" data-key="5">5</button>
+        <button type="button" class="lock-key" data-key="6">6</button>
+        <button type="button" class="lock-key" data-key="7">7</button>
+        <button type="button" class="lock-key" data-key="8">8</button>
+        <button type="button" class="lock-key" data-key="9">9</button>
+        <button type="button" class="lock-key lock-control" data-key="del" aria-label="Delete digit">&#x2190;</button>
+        <button type="button" class="lock-key" data-key="0">0</button>
+        <button type="button" class="lock-key lock-action" data-key="submit">Unlock</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+
+    <!-- Header -->
+    <div class="hero">
+      <span class="pill">TRBE Team Mini App</span>
+      <h1>Get info without browsing chats. <span class="gradient">TRBE</span></h1>
+      <div id="who" class="motd"></div>
+      <div id="motd" class="motd"></div>
+    </div>
+
+
+    <!-- Landing: three boxes -->
+    <div id="landing" class="three-grid">
+      <div class="tile" data-open="panel-chats"><h2>Chats</h2></div>
+      <div class="tile" data-open="panel-team"><h2>Team</h2></div>
+      <div class="tile" data-open="panel-ai"><h2>AI Assistant</h2></div>
+    </div>
+
+    <!-- PANEL: CHATS -->
+    <div id="panel-chats" class="panel">
+
+      <!-- Dashboard -->
+      <section class="card">
+        <div class="card-header">
+          <h3>Dashboard</h3>
+          <button class="back" data-back>Back to Main</button>
+        </div>
+        <div class="dashboard-filters">
+          <div class="dashboard-filter-item">
+            <input id="searchChats" placeholder="Search by name…" />
+          </div>
+          <div class="dashboard-filter-item">
+            <select id="statusFilter" class="filter-select" title="Filter by status">
+              <option value="">All statuses</option>
+              <option>Talking</option>
+              <option>Awaiting data</option>
+              <option>Awaiting SoW</option>
+              <option>SoW signed</option>
+              <option>Awaiting payment</option>
+              <option>Paid</option>
+              <option>Data collection</option>
+              <option>Campaign launched</option>
+              <option>Report awaiting</option>
+              <option>Finished</option>
+            </select>
+          </div>
+          <div class="dashboard-filter-item">
+            <select id="grantFilter" class="filter-select" title="Filter by grant program">
+              <option value="">All grants</option>
+              <option>MultiversX</option>
+              <option>TON</option>
+              <option>Fastex</option>
+              <option>BNB Chain</option>
+            </select>
+          </div>
+        </div>
+        <ul id="chats" class="list"></ul>
+        <div class="hint">Tip: click a chat to auto-fill all tools below.</div>
+      </section>
+
+      <!-- Timelines -->
+      <section class="card">
+        <h3>Product launches (all projects)</h3>
+        <div id="timelineProduct" class="timeline"><div class="bar"></div><div class="hint">Timeline placeholder — product launch milestones will appear here.</div></div>
+      </section>
+      <section class="card">
+        <h3>Campaign launches (all projects)</h3>
+        <div id="timelineCampaign" class="timeline"><div class="bar"></div><div class="hint">Timeline placeholder — campaign launch windows will appear here.</div></div>
+      </section>
+
+      <!-- Tools -->
+      <section class="card">
+        <h3>Tools</h3>
+
+        <div class="acc" id="toolsAcc">
+        <!-- 1) Summary -->
+        <div class="acc-item">
+          <div class="acc-head"><h4>1) Summarize</h4><span class="chev">▾</span></div>
+          <div class="acc-body">
+            <div class="toolbar" style="grid-template-columns:1fr 200px">
+              <input id="chatIdSum" placeholder="Enter chat_id for summary" />
+              <button class="btn" id="doSummary">Summarize</button>
+            </div>
+            <div id="summaryOut" style="
+              background: rgba(255, 255, 255, 0.04);
+              border: 1px solid var(--stroke);
+              border-radius: 12px;
+              padding: 12px 14px;
+              color: var(--text);
+              font-size: 13px;
+              font-weight: normal;
+              margin-top: 8px;
+            ">—</div>
+          </div>
+        </div>
+
+          <!-- 2) Status -->
+          <div class="acc-item">
+            <div class="acc-head"><h4>2) Status</h4><span class="chev">▾</span></div>
+            <div class="acc-body">
+              <h4 style="margin-top:8px; font-size:16px">• Status</h4>
+              <div class="toolbar" style="grid-template-columns:1fr 200px">
+                <input id="chatIdStatus" placeholder="Enter chat_id for status" />
+                <button class="btn" id="getStatus">Get status</button>
+                </div>
+              <div class="toolbar" style="grid-template-columns:minmax(160px,1fr) repeat(3, auto)">
+                <select id="statusSel" disabled>
+                  <option>Talking</option><option>Awaiting data</option><option>Awaiting SoW</option>
+                  <option>SoW signed</option><option>Awaiting payment</option><option>Paid</option>
+                  <option>Data collection</option><option>Campaign launched</option><option>Report awaiting</option><option>Finished</option>
+                </select>
+                <button class="btn secondary" id="editStatusBtn">Edit</button>
+                <button class="btn" id="saveStatus" disabled>Save</button>
+                <button class="btn secondary" id="cancelStatus" disabled style="visibility:hidden">Cancel</button>
+              </div>
+              <div id="statusOut" style="
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--stroke);
+                border-radius: 12px;
+                padding: 12px 14px;
+                color: var(--text);
+                font-size: 13px;
+                font-weight: normal;
+                margin-top: 8px;
+              ">—</div>
+
+              <h4 style="margin-top:16px; font-size:16px">• Grant Projects</h4>
+              <div class="toolbar" style="grid-template-columns:1fr 200px; margin-bottom:8px">
+                <input id="chatIdGrant" placeholder="Enter chat_id for grant assignment" />
+                <select id="grantSelect" disabled>
+                  <option value="">— None —</option>
+                </select>
+                </div>
+              <div class="toolbar" style="grid-template-columns:repeat(2, minmax(0, 1fr)); margin:0 0 8px">
+                <button class="btn secondary" id="editGrantBtn" style="width:100%">Edit</button>
+                <button class="btn" id="saveGrant" disabled style="width:100%">Save</button>
+              </div>
+              <div class="toolbar" id="grantCancelRow" style="grid-template-columns:1fr; justify-items:end; margin:0 0 8px; display:none">
+                <button class="btn secondary" id="cancelGrant" disabled>Cancel</button>
+              </div>
+              <div id="grantOut" style="
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--stroke);
+                border-radius: 12px;
+                padding: 12px 14px;
+                color: var(--text);
+                font-size: 13px;
+                font-weight: normal;
+                margin-top: 8px;
+              ">— None —</div>
+            </div>
+          </div>
+
+          <!-- 3) Company blurb -->
+          <div class="acc-item">
+            <div class="acc-head"><h4>3) Company blurb</h4><span class="chev">▾</span></div>
+            <div class="acc-body">
+              <div class="toolbar" style="grid-template-columns:1fr 200px">
+                <input id="chatIdCompany" placeholder="Enter chat_id for blurb" />
+                <button class="btn" id="getBlurb">Get blurb</button>
+              </div>
+              <div id="blurbOut" style="
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--stroke);
+                border-radius: 12px;
+                padding: 12px 14px;
+                color: var(--text);
+                font-size: 13px;
+                font-weight: normal;
+                white-space: pre-wrap;
+                word-break: break-word;
+                margin-top: 8px;
+              ">—</div>
+            </div>
+          </div>
+
+          <!-- 4) Approx dates per chat -->
+          <div class="acc-item">
+            <div class="acc-head"><h4>4) Approximate dates (per chat)</h4><span class="chev">▾</span></div>
+            <div class="acc-body">
+              <h4 style="margin-top:8px; font-size:16px">• Product Launch</h4>
+              <div class="toolbar" style="grid-template-columns:1fr 200px">
+                <input id="chatIdDatesProd" placeholder="Enter chat_id for product date" />
+                <button class="btn" id="getDatesProd">Get product date</button>
+              </div>
+              <div id="datesOutProd" style="
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--stroke);
+                border-radius: 12px;
+                padding: 12px 14px;
+                color: var(--text);
+                font-size: 13px;
+                font-weight: normal;
+                margin-top: 8px;
+              ">Unknown</div>
+              <div class="toolbar" style="grid-template-columns:1fr 140px; margin-top:8px">
+                <input id="manualDateProd" placeholder="Override date (DD.MM or xx.MM)" />
+                <button class="btn secondary" id="editDateProd">Edit</button>
+              </div>
+              
+              <h4 style="margin-top:16px; font-size:16px">• Campaign Launch</h4>
+              <div class="toolbar" style="grid-template-columns:1fr 200px">
+                <input id="chatIdDatesCamp" placeholder="Enter chat_id for campaign date" />
+                <button class="btn" id="getDatesCamp">Get campaign date</button>
+              </div>
+              <div id="datesOutCamp" style="
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--stroke);
+                border-radius: 12px;
+                padding: 12px 14px;
+                color: var(--text);
+                font-size: 13px;
+                font-weight: normal;
+                margin-top: 8px;
+              ">Unknown</div>
+              <div class="toolbar" style="grid-template-columns:1fr 140px; margin-top:8px">
+                <input id="manualDateCamp" placeholder="Override date (DD.MM or xx.MM)" />
+                <button class="btn secondary" id="editDateCamp">Edit</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5) Next steps -->
+          <div class="acc-item">
+            <div class="acc-head"><h4>5) Next steps (AI)</h4><span class="chev">▾</span></div>
+            <div class="acc-body">
+              <div class="toolbar" style="grid-template-columns:1fr 200px">
+                <input id="chatIdNext" placeholder="Enter chat_id for next steps" />
+                <button class="btn" id="getNext">Suggest</button>
+              </div>
+              <div id="nextOut" style="
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--stroke);
+                border-radius: 12px;
+                padding: 12px 14px;
+                color: var(--text);
+                font-size: 13px;
+                font-weight: normal;
+                white-space: pre-wrap;
+                word-break: break-word;
+                margin-top: 8px;
+              ">—</div>
+            </div>
+          </div>
+
+        <!-- 6) Send a message -->
+        <div class="acc-item">
+          <div class="acc-head"><h4>6) Send a message</h4><span class="chev">▾</span></div>
+          <div class="acc-body">
+            <div class="toolbar" style="grid-template-columns:1fr 200px">
+              <input id="sendChosenSummary" placeholder="No chats selected" disabled />
+              <button class="btn" id="openSendChooser">Select chats</button>
+            </div>
+
+            <!-- Compose ABOVE chips -->
+            <div id="sendCompose" style="display:none; margin-top:8px">
+              <div class="toolbar" style="grid-template-columns:1fr 160px; margin:0 0 8px 0">
+                <textarea id="sendText" placeholder="Type a message to send to all selected chats…"></textarea>
+                <button class="btn" id="sendMessageBtn">Send message</button>
+              </div>
+              <div class="hint">Selected chats:</div>
+              <div id="sendChosenChips" style="margin:6px 0 8px"></div>
+            </div>
+
+            <!-- Full-screen chooser -->
+            <div id="sendChooserFull" class="chooser-full" aria-hidden="true" role="dialog" aria-modal="true">
+              <div class="chooser-shell">
+                <div class="chooser-top">
+                  <div class="chooser-title">Select chats</div>
+                  <input id="sendSearch" placeholder="Search by title, @username, or id…" />
+                  <select id="sendStatusFilter">
+                    <option value="">All statuses</option>
+                    <option>Talking</option><option>Awaiting data</option><option>Awaiting SoW</option>
+                    <option>SoW signed</option><option>Awaiting payment</option><option>Paid</option>
+                    <option>Data collection</option><option>Campaign launched</option><option>Report awaiting</option><option>Finished</option>
+                  </select>
+                  <button class="btn secondary" id="cancelSendSelection">Cancel</button>
+                  <button class="btn" id="confirmSendSelection" disabled>Confirm</button>
+                </div>
+                <ul id="sendChatsList" class="chooser-list"></ul>
+                <div class="hint" style="padding:10px 12px; border-top:1px solid var(--stroke)">Tip: tick multiple chats, then press “Confirm”.</div>
+              </div>
+            </div>
+
+            <!-- Final confirm popup -->
+            <div id="sendConfirm" class="chooser-backdrop" aria-hidden="true">
+              <div class="chooser-card">
+                <h3 style="margin:0 0 8px 0">Confirm send</h3>
+                <div class="hint" style="margin-bottom:8px">Are you sure you want to send this message to these chats?</div>
+                <div class="section-title" style="margin:0 0 6px 0">Message preview</div>
+                <pre id="sendConfirmMsg" class="out" style="max-height:140px"></pre>
+                <div class="section-title" style="margin:8px 0 6px 0">Chats selected</div>
+                <ul id="sendConfirmList" class="list"></ul>
+                <div style="display:grid; gap:10px; grid-template-columns: 1fr 1fr; margin-top:10px">
+                  <button class="btn secondary" id="sendConfirmCancel">Cancel</button>
+                  <button class="btn" id="sendConfirmGo">Confirm send</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PANEL: TEAM -->
+    <div id="panel-team" class="panel">
+      
+      <section class="card" id="teamTasksCard">
+        <div class="card-header">
+          <h3>Team</h3>
+          <button class="back" data-back>Back to Main</button>
+        </div>
+        <div class="toolbar" style="grid-template-columns: 1fr 200px;">
+          <input id="taskSearch" placeholder="Search tasks…" />
+          <select id="teamSelect">
+            <option value="">Choose a teammate…</option>
+            <option value="@Shefer712">Arina — @Shefer712</option>
+            <option value="@Web3Reachout">Kate — @Web3Reachout</option>
+            <option value="@travalss">Val — @travalss</option>
+            <option value="@phoebemangoba">Phoebe — @phoebemangoba</option>
+          </select>
+        </div>
+                <div id="taskMessage" class="hint">Choose a teammate to see their tasks.</div>
+        <ul id="taskList" class="task-list" aria-live="polite"></ul>
+      </section>
+
+      <section class="card" id="assignTaskCard">
+        <h3>Assign a task</h3>
+        <div class="toolbar assign-task-toolbar">
+          <textarea id="newTaskText" placeholder="Describe the task…" rows="3" style="font-size: 14px;"></textarea>
+          <div class="assign-task-side">
+            <select id="newTaskAssignee">
+              <option value="">Assign to…</option>
+              <option value="@Shefer712">Arina — @Shefer712</option>
+              <option value="@Web3Reachout">Kate — @Web3Reachout</option>
+              <option value="@travalss">Val — @travalss</option>
+              <option value="@phoebemangoba">Phoebe — @phoebemangoba</option>
+            </select>
+            <button class="btn" id="addTaskBtn">Assign task</button>
+          </div>
+        </div>
+        <div id="newTaskHint" class="hint">Tasks appear for the teammate you assign them to.</div>
+      </section>
+
+      <section class="card" id="completedTasksCard">
+        <h3>See past tasks</h3>
+        <div id="completedTasksMessage" class="hint">Choose a teammate to see their tasks.</div>
+        <ul id="completedTaskList" class="task-list" aria-live="polite"></ul>
+      </section>
+    </div>
+
+    <!-- PANEL: AI -->
+    <div id="panel-ai" class="panel">
+      <section class="card">
+        <div class="card-header">
+          <h3>AI Assistant</h3>
+          <button class="back" data-back>Back to Main</button>
+        </div>
+        <!-- Select chat -->
+        <div class="toolbar" style="grid-template-columns: 1fr;">
+          <select id="aiChatSelect">
+            <option value="">Select a chat…</option>
+          </select>
+        </div>
+    
+        <!-- Prompt input -->
+        <div class="toolbar" style="grid-template-columns: 1fr auto; margin-top:10px">
+          <textarea id="aiPromptInput" placeholder="Ask your question based on the chat…" rows="3" style="font-size: 14px;"></textarea>
+          <button class="btn" id="askAiBtn">Ask AI</button>
+        </div>
+    
+        <!-- AI output -->
+        <pre id="aiResult" class="ai-response-box" style="margin-top:10px; font-size: 14px; font-weight: normal;">Response will appear here…</pre>
+      </section>
+    </div>
+  </div>
+  
+  <script>
+    let domReady = false;
+    let telegramReady = false;
+    let unlockReady = false;
+    let lockScreenInitialized = false;
+    let lockScreenControls = null;
+    let dashboardInitialized = false;
+    let chatsCache = [];
+    // Track the in-flight loadChats call so other consumers (like the AI assistant) can await shared data.
+    let chatsCachePromise = null;
+    let sendSelected = new Set();
+
+    console.log("🔍 Telegram WebApp context:", window.Telegram?.WebApp);
+    console.log("🔍 initData raw:", window.Telegram?.WebApp?.initData);
+    console.log("🔍 initDataUnsafe.user:", window.Telegram?.WebApp?.initDataUnsafe?.user);
+
+    function tryInitializeDashboard(source = 'unknown'){
+      console.log('[bootstrap] tryInitializeDashboard called', { source, domReady, telegramReady, unlockReady, dashboardInitialized });
+      if (!domReady || !telegramReady || !unlockReady){
+        return;
+      }
+      if (dashboardInitialized){
+        console.log('[bootstrap] dashboard already initialized; skipping.', { source });
+        return;
+      }
+      initDashboard();
+    }
+
+    function shakeLockCircles(){
+      if (lockScreenControls?.shake){
+        lockScreenControls.shake();
+      }
+    }
+
+    function initLockScreen(){
+      if (lockScreenInitialized) return;
+      lockScreenInitialized = true;
+      const overlay = document.getElementById('lock-screen');
+      if (!overlay){
+        unlockReady = true;
+        tryInitializeDashboard('lock-screen-missing');
+        return;
+      }
+      const shell = overlay.querySelector('.lock-shell');
+      const indicatorEls = Array.from(overlay.querySelectorAll('.lock-pin-indicator'));
+      const keypadButtons = overlay.querySelectorAll('[data-key]');
+      const unlockButton = overlay.querySelector('[data-key="submit"]');
+      const defaultUnlockLabel = unlockButton ? unlockButton.textContent : 'Unlock';
+      let pinBuffer = '';
+      let busy = false;
+      let unlocked = overlay.getAttribute('aria-hidden') === 'true';
+
+      if (unlocked){
+        unlockReady = true;
+        tryInitializeDashboard('lock-screen-already-unlocked');
+      }
+      
+      function updateIndicators(){
+        indicatorEls.forEach((indicator, index)=>{
+          if (index < pinBuffer.length){
+            indicator.classList.add('filled');
+          }else{
+            indicator.classList.remove('filled');
+          }
+        });
+      }
+
+      function resetInput(){
+        pinBuffer = '';
+        updateIndicators();
+      }
+
+      function setBusy(state){
+        busy = state;
+        overlay.classList.toggle('lock-busy', state);
+        if (unlockButton){
+          unlockButton.textContent = state ? 'Unlocking…' : defaultUnlockLabel;
+        }
+      }
+
+      function triggerShake(){
+        if (!shell) return;
+        shell.classList.remove('lock-shake', 'shake');
+        void shell.offsetWidth;
+        shell.classList.add('lock-shake', 'shake');
+      }
+
+      function handleSuccess(){
+        if (unlocked) return;
+        unlocked = true;
+        document.activeElement?.blur?.();
+        overlay.classList.remove('lock-busy');
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.classList.add('hidden');
+        document.removeEventListener('keydown', handleKeydown);
+        overlay.addEventListener('transitionend', (event)=>{
+          if (event.target === overlay && event.propertyName === 'opacity'){
+            overlay.remove();
+          }
+        }, { once:true });
+        unlockReady = true;
+        tryInitializeDashboard('unlock-success');
+      }
+
+      function handleInput(key){
+        if (unlocked || busy) return;
+        if (key === 'del'){
+          if (pinBuffer.length){
+            pinBuffer = pinBuffer.slice(0, -1);
+            updateIndicators();
+          }
+          return;
+        }
+        if (key === 'submit'){
+          if (pinBuffer.length === 4){
+            attemptUnlock(pinBuffer);
+          }else{
+            shakeLockCircles();
+          }
+          return;
+        }
+        if (/^\d$/.test(key)){
+          if (pinBuffer.length >= 4) return;
+          pinBuffer += key;
+          updateIndicators();
+          if (pinBuffer.length === 4){
+            attemptUnlock(pinBuffer);
+          }
+        }
+      }
+
+      function handleKeydown(event){
+        if (unlocked || overlay.getAttribute('aria-hidden') === 'true') return;
+        const key = event.key;
+        if (/^\d$/.test(key)){
+          event.preventDefault();
+          handleInput(key);
+        }else if (key === 'Backspace'){
+          event.preventDefault();
+          handleInput('del');
+        }else if (key === 'Enter'){
+          event.preventDefault();
+          handleInput('submit');
+        }
+      }
+
+      keypadButtons.forEach((button)=>{
+        button.addEventListener('click', ()=>{
+          const key = button.dataset.key || '';
+          handleInput(key);
+        });
+      });
+
+      document.addEventListener('keydown', handleKeydown);
+      updateIndicators();
+
+      lockScreenControls = {
+        setBusy,
+        reset: resetInput,
+        shake: triggerShake,
+        unlock: handleSuccess,
+        isBusy: ()=>busy,
+        isUnlocked: ()=>unlocked,
+      };
+    }
+
+    async function attemptUnlock(pin){
+      if (!pin || pin.length !== 4) return false;
+      if (!lockScreenControls || lockScreenControls.isBusy?.()) return false;
+      lockScreenControls.setBusy?.(true);
+      const correctPin = '3537';
+      try{
+        if (pin === correctPin){
+          lockScreenControls.unlock?.();
+          return true;
+        }
+        shakeLockCircles();
+        lockScreenControls.reset?.();
+        return false;
+      }finally{
+        lockScreenControls.setBusy?.(false);
+      }
+    }
+
+            function initDashboard(){
+      if (dashboardInitialized) return;
+      if (document.readyState === 'loading'){
+        console.warn('[initDashboard] DOM not ready, deferring until DOMContentLoaded');
+        document.addEventListener('DOMContentLoaded', initDashboard, { once: true });
+        return;
+      }
+
+      dashboardInitialized = true;
+      console.log('[initDashboard] starting. readyState:', document.readyState);
+
+      const warnMissing = (name, el) => {
+        if (!el) console.warn(`[initDashboard] Missing expected element: ${name}`);
+        return el;
+      };
+
+      const chatsList = warnMissing('chatsList', document.getElementById('chats'));
+      const statusSel = warnMissing('statusSel', document.getElementById('statusSel'));
+      const searchChatsInput = warnMissing('searchChats', document.getElementById('searchChats'));
+      const whoEl = warnMissing('who', document.getElementById('who'));
+      const motdEl = warnMissing('motd', document.getElementById('motd'));
+      const landing = warnMissing('landing', document.getElementById('landing'));
+      const panels = {
+        'panel-chats': warnMissing('panel-chats', document.getElementById('panel-chats')),
+        'panel-team': warnMissing('panel-team', document.getElementById('panel-team')),
+        'panel-ai': warnMissing('panel-ai', document.getElementById('panel-ai')),
+      };
+      const statusFilterEl = warnMissing('statusFilter', document.getElementById('statusFilter'));
+      const grantFilterEl = warnMissing('grantFilter', document.getElementById('grantFilter'));
+      const editStatusBtn = warnMissing('editStatusBtn', document.getElementById('editStatusBtn'));
+      const saveStatusBtn = warnMissing('saveStatusBtn', document.getElementById('saveStatus'));
+      const cancelStatusBtn = warnMissing('cancelStatusBtn', document.getElementById('cancelStatus'));
+      const grantSelectEl = warnMissing('grantSelect', document.getElementById('grantSelect'));
+      const editGrantBtn = warnMissing('editGrantBtn', document.getElementById('editGrantBtn'));
+      const saveGrantBtn = warnMissing('saveGrantBtn', document.getElementById('saveGrant'));
+      const cancelGrantBtn = warnMissing('cancelGrantBtn', document.getElementById('cancelGrant'));
+      const grantCancelRow = warnMissing('grantCancelRow', document.getElementById('grantCancelRow'));
+      const statusOutEl = warnMissing('statusOut', document.getElementById('statusOut'));
+      const grantOutEl = warnMissing('grantOut', document.getElementById('grantOut'));
+      const chatIdStatusInput = warnMissing('chatIdStatus', document.getElementById('chatIdStatus'));
+      const chatIdGrantInput = warnMissing('chatIdGrant', document.getElementById('chatIdGrant'));
+      const chatIdCompanyInput = warnMissing('chatIdCompany', document.getElementById('chatIdCompany'));
+      const blurbOutEl = warnMissing('blurbOut', document.getElementById('blurbOut'));
+      const getBlurbBtn = warnMissing('getBlurb', document.getElementById('getBlurb'));
+      const hasStatusToolDom = () => Boolean(statusSel && statusOutEl && chatIdStatusInput && chatIdGrantInput);
+      let statusToolSyncScheduled = false;
+      let statusToolRetryTimer = null;
+      let statusToolRetryCount = 0;
+      console.log('[initDashboard] statusSel exists?', Boolean(statusSel), statusSel);
+      console.log('[initDashboard] chatsList exists?', Boolean(chatsList), chatsList);
+      console.log('[initDashboard] chatsCache initial state', {
+        isArray: Array.isArray(chatsCache),
+        length: Array.isArray(chatsCache) ? chatsCache.length : undefined
+      });
+              
+    /* Telegram */
+    const Telegram = window.Telegram;
+    const tg = Telegram?.WebApp; tg?.expand?.();
+    const user = tg?.initDataUnsafe?.user;
+    const telegramAuth = (() => {
+      if (!tg) {
+        console.warn('Telegram WebApp SDK is unavailable; API auth headers cannot be populated.');
+      } else if (!tg.initDataUnsafe) {
+        console.warn('Telegram initDataUnsafe is unavailable; API auth headers may be missing.');
+      }
+
+      return {
+        headers(){
+          const webApp = window.Telegram?.WebApp;
+          
+          const initData = webApp?.initData || webApp?.initDataUnsafeRaw || '';
+          console.log('initData length:', initData.length);
+          const headers = { 'x-telegram-init-data': initData };
+          const currentUser = webApp?.initDataUnsafe?.user;
+          const userId = currentUser?.id != null ? currentUser.id : null;
+          const rawUsername = typeof currentUser?.username === 'string' ? currentUser.username : null;
+          const username = rawUsername ? rawUsername.toLowerCase() : null;
+          if (userId != null) headers['x-telegram-id'] = String(userId);
+          if (username) headers['x-telegram-username'] = username;
+          return headers;
+        }
+      };
+    })();
+    if (whoEl){
+      whoEl.textContent = user
+        ? `Hello, ${user.first_name} (@${user.username || 'no username'}) — id: ${user.id}`
+        : 'Open this from Telegram to see user info.';
+    }
+    const day = new Date().getDay();
+    const motdMap = {1:'Monday — set the tone: plan the week and identify one “level-up” step.',2:'Tuesday — momentum day! Kill the smallest tasks and split big ones.',
+      3:'Wednesday — breathe, you’re half-way through. Review blockers.',4:'Thursday — keep steady progress, stay productive without burning out.',
+      5:'Friday — final push, then enjoy the weekend. Tie loose ends.',0:'Sunday — light planning beats heavy grinding. Prep your week.',6:'Saturday — rest & reflect. Tiny wins only.'};
+    if (motdEl) motdEl.textContent = motdMap[day] || '';
+    tg?.MainButton?.setText?.('Close'); tg?.MainButton?.onClick?.(()=>tg.close()); tg?.MainButton?.show?.();
+
+    /* Router */
+    document.querySelectorAll('.tile').forEach(t=>{
+      t.addEventListener('click', ()=>{
+        const id = t.getAttribute('data-open');
+        if (landing) landing.style.display='none';
+        Object.values(panels).forEach(p=>{ if (p) p.style.display='none'; });
+        const targetPanel = panels[id];
+        if (targetPanel) targetPanel.style.display='block';
+        if (id === 'panel-chats') {
+          loadChats();
+          loadTimelines();
+          } else if (id === 'panel-team') {
+          hydrateTasksFromServer();
+        } else if (id === 'panel-ai') {
+          loadCachedChatsForAi();
+        }
+      });
+    });
+    document.querySelectorAll('[data-back]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        Object.values(panels).forEach(p=>{ if (p) p.style.display='none'; });
+        if (landing) landing.style.display='grid';
+      });
+    });
+    
+    /* Accordion */
+    document.querySelectorAll('.acc-item .acc-head').forEach(h=>{
+      h.addEventListener('click', ()=> h.parentElement.classList.toggle('open'));
+    });
+
+    /* Helpers */
+    function debounce(fn, delay = 250){
+      let timer = null;
+      return (...args)=>{
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(()=>fn.apply(null, args), delay);
+      };
+    }
+
+    let activeChatId = null;
+    function setActiveChat(id){ activeChatId = id ? String(id) : null; }
+    function getActiveChat(){
+      if (!activeChatId) return null;
+      return (chatsCache || []).find(c => String(c.id) === String(activeChatId)) || null;
+    }
+
+    const H = {
+      headers(){ return telegramAuth.headers(); },
+      pickChat(id){
+        ['chatIdSum','chatIdStatus','chatIdGrant','chatIdCompany','chatIdDatesProd','chatIdDatesCamp','chatIdNext'].forEach(k=>{
+          const el=document.getElementById(k);
+          if(el) el.value=id;
+        });
+        const aiSel = document.getElementById('aiChatSelect');
+        if (aiSel) {
+          const target = String(id);
+          const hasOption = Array.from(aiSel.options || []).some(opt => opt.value === target);
+          if (hasOption) {
+            if (aiSel.value !== target) resetAiUi();
+            aiSel.value = target;
+          }
+        }
+        handleChatSelection(id);
+        setActiveChat(id);
+        requestStatusToolSync('pickChat');
+      },
+      fmtStatus(s){ return s || '—'; }
+    };
+
+    const chatMessagesListEl = document.getElementById('chatMessagesList');
+    const chatMessagesStatusEl = document.getElementById('chatMessagesStatus');
+    const MESSAGE_CACHE_KEY = 'trbe.cachedMessages';
+    const MESSAGE_SYNC_KEY = 'trbe.lastSyncedAt';
+    const LAST_CHAT_CACHE_KEY = 'trbe.lastChatId';
+    const MAX_CACHED_MESSAGES = 500;
+
+    // messageCacheState is initialized eagerly so chat dropdowns and panels never touch an undefined cache.
+    const messageCacheState = {
+      cache: new Map(),
+      lastSynced: new Map(),
+      lastChatId: null,
+      syncing: new Set(),
+    };
+
+    loadStoredMessagesFromLocalStorage();
+    restoreCachedMessagesOnInit();
+
+    function storageAvailable(){
+      try {
+        return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function safeJsonParse(value){
+      if (!value) return null;
+      try {
+        return JSON.parse(value);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function loadStoredMessagesFromLocalStorage(){
+      if (!storageAvailable()) return;
+      try {
+        const rawMessages = safeJsonParse(localStorage.getItem(MESSAGE_CACHE_KEY));
+        if (rawMessages && typeof rawMessages === 'object'){
+          for (const [chatId, list] of Object.entries(rawMessages)){
+            if (!Array.isArray(list)) continue;
+            const normalized = list
+              .slice(-MAX_CACHED_MESSAGES)
+              .map(normalizeMessage)
+              .filter(Boolean);
+            if (normalized.length){
+              normalized.sort((a,b)=> new Date(a.date||0) - new Date(b.date||0));
+              messageCacheState.cache.set(String(chatId), normalized);
+            }
+          }
+        }
+
+        const rawSynced = safeJsonParse(localStorage.getItem(MESSAGE_SYNC_KEY));
+        if (rawSynced && typeof rawSynced === 'object'){
+          for (const [chatId, iso] of Object.entries(rawSynced)){
+            if (!iso) continue;
+            messageCacheState.lastSynced.set(String(chatId), String(iso));
+          }
+        }
+
+        const lastChatRaw = localStorage.getItem(LAST_CHAT_CACHE_KEY);
+        if (lastChatRaw){
+          messageCacheState.lastChatId = String(lastChatRaw);
+        }
+      } catch (err){
+        console.warn('Failed to load cached messages', err);
+      }
+    }
+
+    function persistMessagesToStorage(){
+      if (!storageAvailable()) return;
+      try {
+        const payload = {};
+        messageCacheState.cache.forEach((messages, chatId)=>{ payload[chatId] = messages; });
+        localStorage.setItem(MESSAGE_CACHE_KEY, JSON.stringify(payload));
+      } catch (err){
+        console.warn('Failed to persist cached messages', err);
+      }
+    }
+
+    function persistLastSyncedToStorage(){
+      if (!storageAvailable()) return;
+      try {
+        const payload = {};
+        messageCacheState.lastSynced.forEach((iso, chatId)=>{ if (iso) payload[chatId] = iso; });
+        localStorage.setItem(MESSAGE_SYNC_KEY, JSON.stringify(payload));
+      } catch (err){
+        console.warn('Failed to persist lastSyncedAt', err);
+      }
+    }
+
+    function persistLastChatIdToStorage(){
+      if (!storageAvailable()) return;
+      try {
+        if (messageCacheState.lastChatId){
+          localStorage.setItem(LAST_CHAT_CACHE_KEY, messageCacheState.lastChatId);
+        }else{
+          localStorage.removeItem(LAST_CHAT_CACHE_KEY);
+        }
+      } catch (err){
+        console.warn('Failed to persist last chat id', err);
+      }
+    }
+
+    function formatMessageTimestamp(iso){
+      if (!iso) return '';
+      const dt = new Date(iso);
+      if (Number.isNaN(dt.getTime())) return '';
+      return dt.toLocaleString();
+    }
+
+    function computeLatestTimestamp(messages = []){
+      let latest = null;
+      for (const msg of messages){
+        if (!msg?.date) continue;
+        const dt = new Date(msg.date);
+        if (Number.isNaN(dt.getTime())) continue;
+        if (!latest || dt > latest) latest = dt;
+      }
+      return latest ? latest.toISOString() : null;
+    }
+
+    function setChatMessagesStatus(text){
+      if (!chatMessagesStatusEl) return;
+      chatMessagesStatusEl.textContent = text || '';
+    }
+
+    function renderChatMessages(chatId, options = {}){
+      if (!chatMessagesListEl) return;
+      const key = chatId ? String(chatId) : '';
+      const messages = key ? (messageCacheState.cache.get(key) || []) : [];
+      if (!messages.length){
+        if (options.showPlaceholder !== false){
+          chatMessagesListEl.innerHTML = `<li class="row"><div>No messages cached.</div></li>`;
+        }else{
+          chatMessagesListEl.innerHTML = '';
+        }
+        setChatMessagesStatus('No messages cached yet. Tap "Sync latest" to refresh.');
+        return;
+      }
+
+      chatMessagesListEl.innerHTML = messages.map(msg=>{
+        const ts = formatMessageTimestamp(msg.date);
+        const sender = msg.sender_id!=null ? `<div class="sub">Sender: ${escapeHtml(String(msg.sender_id))}</div>` : '';
+        const reply = msg.reply_to_msg_id!=null ? `<div class="sub">Reply to ${escapeHtml(String(msg.reply_to_msg_id))}</div>` : '';
+        const text = escapeHtml(String(msg.text||'')).replace(/\n+/g, '<br />');
+        const meta = [sender, reply, ts ? `<div class="sub">${escapeHtml(ts)}</div>` : ''].filter(Boolean).join('');
+        const idAttr = msg.id!=null ? ` data-msg-id="${escapeHtml(String(msg.id))}"` : '';
+        return `<li class="row"${idAttr}><div><div class="title">${text || '(no text)'}</div>${meta}</div></li>`;
+      }).join('');
+    }
+
+    function mergeMessages(existing = [], incoming = []){
+      const map = new Map();
+      const add = (item)=>{
+        const normalized = normalizeMessage(item);
+        if (!normalized) return;
+        const key = normalized.id!=null
+          ? `id:${normalized.id}`
+          : `dt:${normalized.date||''}:${(normalized.text||'').slice(0,120)}:${normalized.reply_to_msg_id ?? ''}`;
+        map.set(key, normalized);
+      };
+      existing.forEach(add);
+      incoming.forEach(add);
+      const merged = Array.from(map.values());
+      merged.sort((a,b)=> new Date(a.date||0) - new Date(b.date||0));
+      if (merged.length > MAX_CACHED_MESSAGES){
+        return merged.slice(merged.length - MAX_CACHED_MESSAGES);
+      }
+      return merged;
+    }
+
+    function normalizeMessage(raw){
+      if (!raw || typeof raw !== 'object') return null;
+      const id = raw.id ?? raw.message_id ?? raw.msg_id ?? null;
+      const sender = raw.sender_id ?? raw.from_id ?? raw.user_id ?? raw.author_id ?? null;
+      const reply = raw.reply_to_msg_id ?? raw.reply_to_message_id ?? raw.reply_to ?? null;
+      let date = raw.date ?? raw.created_at ?? raw.inserted_at ?? null;
+      if (date instanceof Date){
+        date = date.toISOString();
+      } else if (typeof date === 'number'){
+        const assumedMs = date > 1e12 ? date : date * 1000;
+        const dt = new Date(assumedMs);
+        date = Number.isNaN(dt.getTime()) ? null : dt.toISOString();
+      } else if (date != null){
+        date = String(date);
+      }
+      const textVal = raw.text ?? raw.message ?? raw.body ?? '';
+      return {
+        id: id==null ? null : id,
+        sender_id: sender==null ? null : sender,
+        date,
+        text: typeof textVal === 'string' ? textVal : String(textVal ?? ''),
+        reply_to_msg_id: reply==null ? null : reply,
+      };
+    }
+
+    async function ensureChatMessages(chatId, options = {}){
+      const key = chatId ? String(chatId) : '';
+      if (!key) return [];
+      if (messageCacheState.syncing.has(key)){
+        return messageCacheState.cache.get(key) || [];
+      }
+      messageCacheState.syncing.add(key);
+      setChatMessagesStatus('Syncing…');
+      try {
+        return await fetchLatestMessages(key, options);
+      } finally {
+        messageCacheState.syncing.delete(key);
+      }
+    }
+
+    async function fetchLatestMessages(chatId, options = {}){
+      const key = chatId ? String(chatId) : '';
+      if (!key) return [];
+      const forceFull = options.forceFull === true;
+      const lastSynced = forceFull ? null : (messageCacheState.lastSynced.get(key) || null);
+
+      const params = new URLSearchParams({ chat_id: key, limit: String(MAX_CACHED_MESSAGES) });
+      if (lastSynced) params.set('since', lastSynced);
+
+      let response;
+      try {
+        response = await fetch(`/api/messages-latest?${params.toString()}`, { headers: H.headers() });
+      } catch (err){
+        throw new Error(err?.message || 'Network error');
+      }
+
+      if (!response.ok){
+        if (!forceFull && lastSynced){
+          return fetchLatestMessages(key, { forceFull: true });
+        }
+        const body = await response.text().catch(()=> '');
+        const message = body || `Request failed (${response.status})`;
+        const error = new Error(message);
+        error.status = response.status;
+        throw error;
+      }
+
+      const raw = await response.json().catch(()=> []);
+      if (!Array.isArray(raw)){
+        return messageCacheState.cache.get(key) || [];
+      }
+
+      const normalizedIncoming = raw.map(normalizeMessage).filter(Boolean);
+      const base = (!lastSynced || forceFull) ? [] : (messageCacheState.cache.get(key) || []);
+      const merged = mergeMessages(base, normalizedIncoming);
+      if (!merged.length && base.length){
+        setChatMessagesStatus('No messages found.');
+        return base;
+      }
+
+      const latestIso = computeLatestTimestamp(merged) || lastSynced;
+      messageCacheState.cache.set(key, merged);
+      if (latestIso){
+        messageCacheState.lastSynced.set(key, latestIso);
+      }
+      persistMessagesToStorage();
+      persistLastSyncedToStorage();
+      renderChatMessages(key);
+      if (latestIso){
+        setChatMessagesStatus(`Synced ${formatMessageTimestamp(latestIso)}`);
+      } else if (!merged.length){
+        setChatMessagesStatus('No messages found.');
+      } else {
+        setChatMessagesStatus('Sync complete.');
+      }
+      return merged;
+    }
+
+    function handleChatSelection(chatId, options = {}){
+      const key = chatId ? String(chatId) : '';
+      if (!key) return;
+      if (messageCacheState.lastChatId !== key){
+        setActiveChat(key);
+        messageCacheState.lastChatId = key;
+        persistLastChatIdToStorage();
+      }
+
+      const cached = messageCacheState.cache.get(key) || [];
+      renderChatMessages(key, { showPlaceholder: options.showPlaceholder !== false });
+      if (cached.length){
+        const iso = messageCacheState.lastSynced.get(key) || computeLatestTimestamp(cached);
+        if (iso) setChatMessagesStatus(`Cached up to ${formatMessageTimestamp(iso)}`);
+        else setChatMessagesStatus('Showing cached messages');
+      } else {
+        setChatMessagesStatus('No cached messages yet.');
+      }
+
+      if (!options.skipSync){
+        ensureChatMessages(key, { forceFull: options.forceFull === true }).catch(err => {
+          console.warn('chat message sync failed', err);
+          const reason = err?.message || 'Unknown error';
+          setChatMessagesStatus(`Failed to sync (${reason})`);
+        });
+      }
+      requestStatusToolSync('handleChatSelection');
+    }
+
+    function restoreCachedMessagesOnInit(){
+      if (!messageCacheState.lastChatId && messageCacheState.cache.size){
+        const firstKey = messageCacheState.cache.keys().next().value;
+        if (firstKey){
+          messageCacheState.lastChatId = String(firstKey);
+          persistLastChatIdToStorage();
+        }
+      }
+      if (!messageCacheState.lastChatId){
+        if (chatMessagesListEl) chatMessagesListEl.innerHTML = '';
+        setChatMessagesStatus('');
+        return;
+      }
+      handleChatSelection(messageCacheState.lastChatId);
+    }
+
+    /* ---------- Send a message (Full-screen chooser) ---------- */
+    const openSendChooser   = document.getElementById('openSendChooser');
+    const sendChooserFull   = document.getElementById('sendChooserFull');
+    const cancelSendSelBtn  = document.getElementById('cancelSendSelection');
+    const confirmSendSelBtn = document.getElementById('confirmSendSelection');
+    const sendSearch        = document.getElementById('sendSearch');
+    const sendStatusFilter  = document.getElementById('sendStatusFilter');
+    const sendChatsList     = document.getElementById('sendChatsList');
+
+    const sendCompose       = document.getElementById('sendCompose');
+    const sendChosenChips   = document.getElementById('sendChosenChips');
+    const sendChosenSummary = document.getElementById('sendChosenSummary');
+
+    sendSelected = new Set(); // chat ids as strings
+    console.log('[initDashboard] send UI references', {
+      sendChooserFullExists: Boolean(sendChooserFull),
+      sendChatsListExists: Boolean(sendChatsList),
+      sendStatusFilterExists: Boolean(sendStatusFilter)
+    });
+
+    function openChooser(){
+      // ensure chats are loaded
+      (async ()=>{
+        if (!Array.isArray(chatsCache) || chatsCache.length === 0) { await loadChats(); }
+        renderSendList();
+        confirmSendSelBtn.disabled = (sendSelected.size === 0);
+        sendChooserFull.setAttribute('aria-hidden','false');
+      })();
+    }
+    function closeChooser(){
+      sendChooserFull.setAttribute('aria-hidden','true');
+    }
+
+    function renderSendList(){
+      const q = (sendSearch.value||'').trim().toLowerCase();
+      const f = (sendStatusFilter.value||'').trim();
+
+      const items = (chatsCache||[]).filter(c=>{
+        const matchesQ = !q || String(c.id).includes(q) ||
+          (c.title||'').toLowerCase().includes(q) || (c.username||'').toLowerCase().includes(q);
+        const matchesS = !f || (c.status === f);
+        return matchesQ && matchesS;
+      });
+
+      if(!items.length){
+        sendChatsList.innerHTML = `<li class="chooser-row"><div class="hint" style="grid-column:1/-1">No chats found.</div></li>`;
+        return;
+      }
+
+      sendChatsList.innerHTML = items.map(c=>{
+        const id = String(c.id);
+        const checked = sendSelected.has(id) ? 'checked' : '';
+        const uname = c.username ? `@${c.username}` : '';
+        const status = c.status || '—';
+        return `<li class="chooser-row" data-id="${id}">
+          <input type="checkbox" class="send-tick" ${checked} />
+          <div>
+            <div class="title">${c.title || '(no title)'}</div>
+            <div class="sub">${uname ? uname+' • ' : ''}${id}</div>
+          </div>
+          <div class="status-pill">${status}</div>
+        </li>`;
+      }).join('');
+
+      sendChatsList.querySelectorAll('.chooser-row').forEach(li=>{
+        const id = li.getAttribute('data-id');
+        const tick = li.querySelector('.send-tick');
+        tick.addEventListener('change', ()=>{
+          if (tick.checked) sendSelected.add(id); else sendSelected.delete(id);
+          confirmSendSelBtn.disabled = (sendSelected.size === 0);
+          updateChosenSummaryPreview();
+        });
+        li.addEventListener('click', (e)=>{
+          if (e.target === tick) return;
+          tick.checked = !tick.checked; tick.dispatchEvent(new Event('change'));
+        });
+      });
+    }
+
+    function updateChosenSummaryPreview(){
+      const count = sendSelected.size;
+      sendChosenSummary.value = count ? `${count} chat${count>1?'s':''} selected` : 'No chats selected';
+    }
+
+    function showCompose(){
+      const ids = Array.from(sendSelected);
+      const map = new Map(chatsCache.map(c=>[String(c.id), c]));
+      sendChosenChips.innerHTML = ids.map(id=>{
+        const c = map.get(String(id)) || { title:'(unknown)', id };
+        return `<span class="chip" data-id="${id}">
+          ${c.title || '(no title)'} <span class="sub">• ${id}</span>
+          <span class="x" title="Remove">✕</span>
+        </span>`;
+      }).join('');
+
+      sendChosenChips.querySelectorAll('.chip .x').forEach(x=>{
+        x.addEventListener('click', ()=>{
+          const chip = x.closest('.chip'); const id = chip.getAttribute('data-id');
+          sendSelected.delete(String(id)); chip.remove(); updateChosenSummaryPreview();
+          if (sendSelected.size === 0){ sendCompose.style.display='none'; }
+        });
+      });
+
+      sendCompose.style.display = ids.length ? 'block' : 'none';
+      updateChosenSummaryPreview();
+    }
+
+    openSendChooser.addEventListener('click', openChooser);
+    cancelSendSelBtn.addEventListener('click', closeChooser);
+    confirmSendSelBtn.addEventListener('click', ()=>{ closeChooser(); showCompose(); });
+
+    sendSearch.addEventListener('input', renderSendList);
+    sendStatusFilter.addEventListener('change', renderSendList);
+
+    /* Send → final confirm popup */
+    const sendMessageBtn   = document.getElementById('sendMessageBtn');
+    const sendConfirm      = document.getElementById('sendConfirm');
+    const sendConfirmMsg   = document.getElementById('sendConfirmMsg');
+    const sendConfirmList  = document.getElementById('sendConfirmList');
+    const sendConfirmCancel= document.getElementById('sendConfirmCancel');
+    const sendConfirmGo    = document.getElementById('sendConfirmGo');
+
+    function openFinalConfirm(){
+      const msg = (document.getElementById('sendText').value || '').trim();
+      const ids = Array.from(sendSelected);
+      if (!ids.length){ alert('Select at least one chat first.'); return; }
+      if (!msg){ alert('Write a message first.'); return; }
+      sendConfirmMsg.textContent = msg;
+
+      const map = new Map(chatsCache.map(c=>[String(c.id), c]));
+      sendConfirmList.innerHTML = ids.map(id=>{
+        const c = map.get(String(id)) || { title:'(unknown)', id, status:'—' };
+        const uname = c.username ? `@${c.username}` : '';
+        const status = c.status || '—';
+        return `<li class="row">
+          <div>
+            <div class="title">${c.title || '(no title)'}</div>
+            <div class="sub">${uname ? uname+' • ' : ''}${id}</div>
+          </div>
+          <div class="status-pill">${status}</div>
+        </li>`;
+      }).join('');
+      sendConfirm.style.display = 'flex';
+    }
+    function closeFinalConfirm(){ sendConfirm.style.display = 'none'; }
+
+    sendMessageBtn?.addEventListener('click', openFinalConfirm);
+    sendConfirmCancel?.addEventListener('click', closeFinalConfirm);
+    sendConfirmGo?.addEventListener('click', async ()=>{
+      const msg = (document.getElementById('sendText').value || '').trim();
+      const ids = Array.from(sendSelected);
+      if (!ids.length) { alert('Select at least one chat first.'); return; }
+      if (!msg) { alert('Write a message first.'); return; }
+
+  try{
+    const r = await fetch('/api/send-message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...H.headers(), // adds Telegram identity headers for backend auth
+      },
+      body: JSON.stringify({
+        chat_ids: ids,
+        message: msg,
+        parse_mode: 'HTML',
+        disable_notification: false,
+        preview_only: false
+      })
+    });
+
+    const raw = await r.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      console.error('Non-JSON error body from server:', raw);
+      alert(`Send failed (${r.status}): ${raw.slice(0,300)}`);
+      return;
+    }
+
+    if (!r.ok) {
+      console.error('send-message failed', r.status, data);
+      alert(`Send failed (${r.status}): ${data?.message || data?.error || 'Unknown error'}`);
+      return;
+    }
+
+    const sent = data?.sent ?? 0;
+    const failed = data?.failed ?? 0;
+
+    // Close popup and give feedback
+    closeFinalConfirm();
+
+    if (failed > 0) {
+      // Show per-chat errors in console to help debugging
+      console.warn('Some chats failed:', data?.results?.filter(x=>x.status!=='ok'));
+      alert(`Sent to ${sent} chat${sent!==1?'s':''}; failed ${failed}. Check console for details.`);
+    } else {
+      alert(`Successfully sent to ${sent} chat${sent!==1?'s':''}.`);
+    }
+
+    // (Optional) Clear the message box after successful send
+    // document.getElementById('sendText').value = '';
+
+  } catch (e){
+    console.error('send-message network error', e);
+    alert(`Network error: ${e?.message || e}`);
+  }
+    });
+    
+    // 🔍 Live search and status filter handlers
+    let grantsCache = [];
+    let grantsPromise = null;
+    let statusOriginalValue = '';
+    let grantOriginalValue = '';
+    let pendingGrantValue = '';
+    let editingStatus = false;
+    let editingGrant = false;
+
+    function updateGrantFilterOptions(list = []){
+      if (!grantFilterEl) return;
+      const previousValue = grantFilterEl.value || '';
+      const canonical = new Map();
+      for (const item of list){
+        const name = (item?.name || '').trim();
+        if (!name) continue;
+        const key = name.toLowerCase();
+        if (!canonical.has(key)){
+          canonical.set(key, name);
+        }
+      }
+      const names = Array.from(canonical.values()).sort((a, b)=>a.localeCompare(b, undefined, { sensitivity: 'base' }));
+      grantFilterEl.innerHTML = '';
+      const allOption = document.createElement('option');
+      allOption.value = '';
+      allOption.textContent = 'All grants';
+      grantFilterEl.appendChild(allOption);
+      for (const name of names){
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        grantFilterEl.appendChild(opt);
+      }
+      const shouldRestore = previousValue && Array.from(grantFilterEl.options || []).some(opt => opt.value === previousValue);
+      if (shouldRestore){
+        grantFilterEl.value = previousValue;
+      }
+    }
+    function requestStatusToolSync(reason = 'unspecified'){
+      if (!hasStatusToolDom()){
+        console.warn('[initDashboard] status tool DOM incomplete; deferring sync', {
+          reason,
+          statusSel: Boolean(statusSel),
+          statusOutEl: Boolean(statusOutEl),
+          chatIdStatusInput: Boolean(chatIdStatusInput),
+          chatIdGrantInput: Boolean(chatIdGrantInput),
+          grantSelectEl: Boolean(grantSelectEl),
+          grantOutEl: Boolean(grantOutEl)
+        });
+        if (statusToolRetryCount < 5 && !statusToolRetryTimer){
+          statusToolRetryCount += 1;
+          statusToolRetryTimer = setTimeout(()=>{
+            statusToolRetryTimer = null;
+            requestStatusToolSync(`${reason}-retry${statusToolRetryCount}`);
+          }, 120 * statusToolRetryCount);
+        }
+        return;
+      }
+
+      statusToolRetryCount = 0;
+      if (statusToolRetryTimer){
+        clearTimeout(statusToolRetryTimer);
+        statusToolRetryTimer = null;
+      }
+      if (statusToolSyncScheduled) return;
+      statusToolSyncScheduled = true;
+      requestAnimationFrame(()=>{
+        statusToolSyncScheduled = false;
+        syncStatusToolFromActiveChat();
+      });
+    }
+              
+    const scheduleChatsReload = debounce(()=>loadChats(), 220);
+    if (searchChatsInput){
+      searchChatsInput.addEventListener('input', renderChats);
+    } else {
+      console.warn('[initDashboard] searchChats input missing; live filtering disabled.');
+    }
+    if (statusFilterEl){
+      statusFilterEl.addEventListener('change', ()=>{
+        renderChats();
+        scheduleChatsReload();
+      });
+    } else {
+      console.warn('[initDashboard] statusFilter element missing; status filter disabled.');
+    }
+    if (grantFilterEl){
+      grantFilterEl.addEventListener('change', ()=>{
+        renderChats();
+        scheduleChatsReload();
+      });
+    } else {
+      console.warn('[initDashboard] grantFilter element missing; grant filter disabled.');
+    }
+
+        /* ---------- Chats dashboard & data ---------- */
+
+      async function loadChats(options = {}){
+                const silent = options?.silent === true;
+        const force = options?.force === true;
+
+        const inFlight = chatsCachePromise;
+        if (inFlight){
+          if (!force){
+            console.log('[loadChats] reusing in-flight chats load');
+            return inFlight;
+          }
+          console.log('[loadChats] force reload requested; awaiting current load before refetching.');
+          try {
+            await inFlight;
+          } catch (err) {
+            console.warn('[loadChats] previous chats load rejected before force reload', err);
+          } finally {
+            if (chatsCachePromise === inFlight){
+              chatsCachePromise = null;
+            }
+          }
+        }
+
+        const promise = (async () => {
+          if (!chatsList){
+            console.warn('[loadChats] chatsList element missing; aborting load.');
+            return chatsCache;
+          }
+          if (!silent) {
+            chatsList.innerHTML = `<li class="row"><div>Loading…</div></li>`;
+          }
+
+          const params = new URLSearchParams();
+          const statusFilterValue = (statusFilterEl?.value || '').trim();
+          const grantFilterValue = (grantFilterEl?.value || '').trim();
+          if (statusFilterValue) params.set('status', statusFilterValue);
+          if (grantFilterValue) params.set('grant', grantFilterValue);
+          const query = params.toString();
+          const url = query ? `/api/chats?${query}` : `/api/chats`;
+          try{
+            console.log('[loadChats] fetching chats', { silent, force });
+            const r = await fetch(url, { headers:H.headers() });
+            const data = await r.json().catch(()=>null);
+            console.log("Loaded chats:", data);
+            if(!r.ok){
+              const errMsg = (data && (data.error || data.details)) || 'unknown';
+              chatsList.innerHTML = `<li class="row"><div>Server error (${r.status}): ${errMsg}</div></li>`;
+              chatsCache = [];
+              return chatsCache;
+            }
+
+            let payload = Array.isArray(data?.chats)
+              ? data.chats
+              : Array.isArray(data?.data)
+                ? data.data
+                : Array.isArray(data)
+                  ? data
+                  : [];
+
+            if (!payload.length){
+              console.log('[loadChats] primary payload empty, fetching cached chats');
+              try {
+                const cachedResponse = await fetch('/api/cached-chats', { headers: H.headers() });
+                const cachedPayload = await cachedResponse.json().catch(() => (cachedResponse.ok ? [] : {}));
+                if (cachedResponse.ok){
+                  payload = Array.isArray(cachedPayload)
+                    ? cachedPayload
+                    : Array.isArray(cachedPayload?.data)
+                      ? cachedPayload.data
+                      : [];
+                } else {
+                  console.warn('[loadChats] cached chats fallback failed', cachedResponse.status, cachedPayload);
+                }
+              } catch (cachedErr) {
+                console.warn('[loadChats] cached chats fallback error', cachedErr);
+              }
+            }
+
+          console.log('[loadChats] received payload', { count: payload.length, sample: payload[0] });
+
+            const mapped = payload.map(c => {
+              const grantObj = c.grant || (c.grant_id && c.grant_name ? { id: c.grant_id, name: c.grant_name } : null);
+              const grantId = grantObj?.id ?? c.grant_id ?? null;
+              const grantName = grantObj?.name ?? c.grant_name ?? null;
+              const idValue = c.id != null ? c.id : (c.chat_id != null ? c.chat_id : null);
+              return {
+                ...c,
+                id: idValue,
+                status: c.status || '—',
+                status_updated_at: c.status_updated_at || null,
+                grant: grantObj,
+                grant_id: grantId,
+                grant_name: grantName
+              };
+            });
+
+            const deduped = [];
+            const seen = new Set();
+            for (const chat of mapped) {
+              const key = chat?.id != null ? String(chat.id) : '';
+              if (!key) continue;
+              if (seen.has(key)) continue;
+              seen.add(key);
+              deduped.push(chat);
+            }
+            if (deduped.length !== mapped.length) {
+              console.warn('[loadChats] dropped duplicate chat rows', { before: mapped.length, after: deduped.length });
+            }
+            chatsCache = deduped;
+
+            console.log('[loadChats] mapped chats cache', { count: mapped.length, deduped: deduped.length });
+
+            renderChats();
+            requestStatusToolSync('loadChats');
+            if (typeof renderSendList === 'function') renderSendList();
+            if (typeof populateAiChatSelect === 'function') {
+              try { populateAiChatSelect(); } catch (_) {}
+            }
+
+            if (chatsCache.length){
+              await batchLoadStatuses(chatsCache.slice(0, 50).map(c=>c.id));
+            }
+          }catch(e){
+            chatsList.innerHTML = `<li class="row"><div>Network/JS error: ${e.message||e}</div></li>`;
+            chatsCache = [];
+          }
+
+        return chatsCache;
+        })();
+
+        chatsCachePromise = promise;
+        try {
+          return await promise;
+        } finally {
+          if (chatsCachePromise === promise){
+            chatsCachePromise = null;
+          }
+        }
+      }
+
+    function setGrantSelectValue(value){
+      pendingGrantValue = value ? String(value) : '';
+      if (!grantSelectEl) return;
+      const opts = Array.from(grantSelectEl.options || []);
+      const has = opts.some(opt => opt.value === pendingGrantValue);
+      grantSelectEl.value = has ? pendingGrantValue : '';
+    }
+
+    async function ensureGrantOptionsLoaded(){
+      if (grantsCache.length) {
+        if (grantSelectEl && grantSelectEl.disabled && editingGrant) grantSelectEl.disabled = false;
+        setGrantSelectValue(pendingGrantValue);
+        updateGrantFilterOptions(grantsCache);
+        return grantsCache;
+      }
+      if (grantsPromise) return grantsPromise;
+      grantsPromise = (async () => {
+        try {
+          const r = await fetch('/api/grants', { headers: H.headers() });
+          const data = await r.json().catch(()=>({}));
+          if (!r.ok) throw new Error(data?.error || data?.details || 'failed_to_load_grants');
+          const list = Array.isArray(data?.grants) ? data.grants : [];
+          grantsCache = list;
+          if (grantSelectEl){
+            grantSelectEl.innerHTML = '';
+            const noneOption = document.createElement('option');
+            noneOption.value = '';
+            noneOption.textContent = '— None —';
+            grantSelectEl.appendChild(noneOption);
+            for (const grant of list){
+              if (!grant || grant.id == null) continue;
+              const opt = document.createElement('option');
+              opt.value = String(grant.id);
+              opt.textContent = grant?.name || `Program #${grant.id}`;
+              if (grant?.name) opt.dataset.name = grant.name;
+              grantSelectEl.appendChild(opt);
+            }
+            setGrantSelectValue(pendingGrantValue);
+            grantSelectEl.disabled = !editingGrant;
+          }
+          updateGrantFilterOptions(list);
+          return list;
+        } catch (err) {
+          console.error('Failed to load grants', err);
+          if (grantSelectEl && editingGrant) grantSelectEl.disabled = false;
+          updateGrantFilterOptions([]);
+          return [];
+        } finally {
+          grantsPromise = null;
+        }
+      })();
+      return grantsPromise;
+    }
+
+      ensureGrantOptionsLoaded().catch(err => {
+        console.warn('[grant] initial grant options load failed', err);
+    });
+              
+    function syncStatusToolFromActiveChat(){
+      if (!hasStatusToolDom()){
+        console.warn('[syncStatusToolFromActiveChat] required DOM not ready; skipping sync.', {
+          statusSel: Boolean(statusSel),
+          statusOutEl: Boolean(statusOutEl),
+          chatIdStatusInput: Boolean(chatIdStatusInput),
+          chatIdGrantInput: Boolean(chatIdGrantInput)
+        });
+        return;
+      }
+      const chat = getActiveChat();
+      const chatId = chat?.id != null ? String(chat.id) : '';
+      const wasEditingStatus = editingStatus;
+      const wasEditingGrant = editingGrant;
+      if (chat?.id != null){
+        if (chatIdStatusInput) chatIdStatusInput.value = chatId;
+        if (chatIdGrantInput) chatIdGrantInput.value = chatId;
+      }
+      if (!wasEditingStatus && statusSel){
+        if (chat?.status){
+          const desired = String(chat.status);
+          const has = Array.from(statusSel.options || []).some(opt => opt.value === desired);
+          if (has) statusSel.value = desired;
+          else if (statusSel.options && statusSel.options.length) statusSel.selectedIndex = 0;
+        } else if (statusSel.options && statusSel.options.length){
+          statusSel.selectedIndex = 0;
+        }
+        statusOriginalValue = statusSel.value || '';
+      }
+      if (statusOutEl){
+        let display = chat ? H.fmtStatus(chat.status) : '—';
+        if (chat?.status === 'SoW signed'){ const d = daysSince(chat.status_updated_at); if (d) display += ` · ${d}`; }
+        statusOutEl.textContent = display;
+      }
+      const grantId = chat?.grant_id ? String(chat.grant_id) : '';
+      if (!wasEditingGrant){
+        grantOriginalValue = grantId;
+        setGrantSelectValue(grantId);
+      }
+      if (grantOutEl){
+        const grantName = chat?.grant_name || chat?.grant?.name || '';
+        grantOutEl.textContent = grantName || '— None —';
+      }
+      if (!wasEditingStatus) setStatusEditing(false);
+      if (!wasEditingGrant) setGrantEditing(false);
+    }
+
+    function daysSince(dateStr){
+      if(!dateStr) return null;
+      const then = new Date(dateStr); if(isNaN(then)) return null;
+      const d = Math.floor((Date.now() - then.getTime()) / (1000*60*60*24));
+      return d>=0 ? `${d}d` : null;
+    }
+
+    function renderChats(){
+      if (!chatsList){
+        console.warn('[renderChats] chatsList element missing; skipping render.');
+        return;
+      }
+        const q = (searchChatsInput?.value || '').trim().toLowerCase();
+        const statusValueRaw = (statusFilterEl?.value || '').trim();
+        const grantValueRaw = (grantFilterEl?.value || '').trim();
+        const statusValue = statusValueRaw ? statusValueRaw.toLowerCase() : '';
+        const grantValue = grantValueRaw ? grantValueRaw.toLowerCase() : '';
+        console.log('[renderChats] cache length before filtering', chatsCache?.length || 0);
+        const items = (chatsCache || []).filter(c=>{
+          const matchesQ = !q || String(c.id).includes(q) ||
+            (c.title||'').toLowerCase().includes(q) || (c.username||'').toLowerCase().includes(q);
+          const matchesS = !statusValue || (String(c.status || '').toLowerCase() === statusValue);
+          const grantName = (c.grant_name || c.grant?.name || '').toLowerCase();
+          const matchesG = !grantValue || grantName === grantValue;
+          return matchesQ && matchesS && matchesG;
+        });
+      
+      console.log('[renderChats] filtered items', { count: items.length, first: items[0] });
+        if(!items.length){
+          const hasFilters = Boolean(q || statusValue || grantValue);
+          const message = hasFilters ? 'No chats match the current filters.' : 'No chats available.';
+          chatsList.innerHTML = `<li class="row"><div>${message}</div></li>`;
+          return;
+      }
+
+      chatsList.innerHTML = items.map(c => {
+        const parts = [];
+        if (c.username) parts.push(`@${c.username}`);
+        parts.push(String(c.id));
+        let badgeText = H.fmtStatus(c.status);
+        if (c.status === 'SoW signed') { const d = daysSince(c.status_updated_at); if (d) badgeText += ` · ${d}`; }
+        const grantName = c.grant_name || c.grant?.name || '';
+        const grantHtml = grantName ? `<span class="grant-pill">${escapeHtml(grantName)}</span>` : '';
+        return `<li class="row" data-id="${escapeHtml(String(c.id))}">
+          <div>
+             <div class="title">${escapeHtml(c.title || '(no title)')}</div>
+            <div class="sub">${escapeHtml(parts.join(' • '))}</div>
+          </div>
+          <div class="status-stack">
+            <div class="status-pill">${escapeHtml(badgeText)}</div>
+            ${grantHtml}
+          </div>
+        </li>`;
+      }).join('');
+
+      chatsList.querySelectorAll('.row').forEach(li=>{
+        li.addEventListener('click', async ()=>{
+          const id = li.getAttribute('data-id');
+          H.pickChat(id);
+          chatsList.querySelectorAll('.row').forEach(x=>x.style.outline='none');
+          li.style.outline='2px solid rgba(194,123,255,.6)';
+          await fetchAndApplyStatus(id, li.querySelector('.status-pill'));
+        });
+      });
+      const highlightId = activeChatId || messageCacheState.lastChatId;
+      if (highlightId){
+        const stored = chatsList.querySelector(`.row[data-id="${highlightId}"]`);
+        if (stored) stored.style.outline='2px solid rgba(194,123,255,.6)';
+      }
+    }
+
+    async function fetchAndApplyStatus(chatId, badgeEl){
+      try{
+        const r = await fetch(`/api/status-auto?chat_id=${encodeURIComponent(chatId)}&limit=300`, { headers:H.headers() });
+        const data = await r.json().catch(()=>({}));
+        if(!r.ok) return;
+        const s = data?.status || data?.text || '—';
+        const updated_at = data?.status_updated_at || null;
+
+        const idx = chatsCache.findIndex(x=>String(x.id)===String(chatId));
+        if(idx>=0){ chatsCache[idx].status = s; chatsCache[idx].status_updated_at = updated_at; }
+        if (String(chatId) === String(activeChatId)){
+          requestStatusToolSync('fetchAndApplyStatus');
+        }
+
+        if (badgeEl){
+          let txt = s;
+          if (s==='SoW signed'){ const d = daysSince(updated_at); if (d) txt += ` · ${d}`; }
+          badgeEl.textContent = txt;
+        }
+      }catch(_){}
+    }
+
+    async function batchLoadStatuses(ids){
+      for (const id of ids){
+        const badge = document.querySelector(`.row[data-id="${id}"] .status-pill`);
+        await fetchAndApplyStatus(id, badge);
+      }
+    }
+
+    /* Timelines */
+    async function loadTimelines(){
+      const tp = document.getElementById('timelineProduct');
+      const tc = document.getElementById('timelineCampaign');
+      const setLoading = (el, msg) => { el.innerHTML = `<div class="bar"></div><div class="hint">${msg}</div>`; };
+      setLoading(tp, 'Loading…'); setLoading(tc, 'Loading…');
+      try{
+        const [rp, rc] = await Promise.all([
+          fetch('/api/timeline-product',  { headers:H.headers() }),
+          fetch('/api/timeline-campaign', { headers:H.headers() })
+        ]);
+        const jp = await rp.json().catch(()=>({})); const jc = await rc.json().catch(()=>({}));
+        const render = (el, ok, payload) => {
+          if (!ok) { el.innerHTML = `<div class="bar"></div><div class="hint">Error: ${(payload&&payload.error)||'server error'}</div>`; return; }
+          const items = payload.items || [];
+          if (!items.length){ el.innerHTML = `<div class="bar"></div><div class="hint">No mentions found.</div>`; return; }
+          el.innerHTML = `<div class="bar"></div><ul style="margin:6px 0 0; padding-left:16px">${items.map(i=>`<li>${i.label}</li>`).join('')}</ul>`;
+        };
+        render(tp, rp.ok, jp); render(tc, rc.ok, jc);
+      }catch(e){
+        tp.innerHTML = `<div class="bar"></div><div class="hint">Error: ${e.message||e}</div>`;
+        tc.innerHTML = `<div class="bar"></div><div class="hint">Error: ${e.message||e}</div>`;
+      }
+    }
+
+    /* SUMMARY */
+    document.getElementById('doSummary').onclick = async () => {
+      const id = document.getElementById('chatIdSum').value.trim();
+      if (!id) return alert('Enter chat_id');
+      const out = document.getElementById('summaryOut');
+      out.textContent = 'Summarizing…';
+      try {
+        const r = await fetch(`/api/summary?chat_id=${encodeURIComponent(id)}`, { headers: H.headers() });
+        const data = await r.json().catch(()=>({}));
+        if (!r.ok) { out.textContent = `Server error (${r.status}): ${data?.error || 'Unknown error'}${data?.stage ? ` [${data.stage}]` : ''}`; return; }
+        out.textContent = data.text || '(no text)';
+      } catch (e) { out.textContent = `Network/JS error: ${e.message || e}`; }
+    };
+
+    /* STATUS — auto */
+    const getStatusBtn = warnMissing('getStatus', document.getElementById('getStatus'));
+    if (getStatusBtn) getStatusBtn.onclick = async ()=>{
+      const id = (chatIdStatusInput?.value || '').trim();
+      if(!id) return alert('Enter chat_id');
+      if (statusOutEl) statusOutEl.textContent = 'Loading…';
+      try{
+        const r=await fetch(`/api/status-auto?chat_id=${encodeURIComponent(id)}&limit=200`, { headers:H.headers() });
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok){
+          if (statusOutEl) statusOutEl.textContent=`Server error (${r.status}): ${data?.error||'unknown'}`;
+          return;
+        }
+        const s = data?.status || data?.text || '—';
+        if (statusOutEl) statusOutEl.textContent = s;
+        if (statusSel){
+          const has = Array.from(statusSel.options || []).some(opt => opt.value === s);
+          if (has) statusSel.value = s;
+          statusOriginalValue = statusSel.value || '';
+        }
+        const idx = chatsCache.findIndex(x=>String(x.id)===String(id));
+        if(idx>=0){
+          const target = chatsCache[idx];
+          target.status = s;
+          target.status_updated_at = data?.status_updated_at || target.status_updated_at || null;
+          const row = document.querySelector(`.row[data-id="${id}"] .status-pill`);
+          if(row) row.textContent = s;
+        }
+        if (String(id) === String(activeChatId)) requestStatusToolSync('status-auto');
+        else setStatusEditing(false);
+      }catch(e){
+        if (statusOutEl) statusOutEl.textContent = `Error: ${e.message||e}`;
+      }
+    };
+
+    /* STATUS — manual edit/save */
+        function setStatusEditing(isEditing){
+      editingStatus = Boolean(isEditing);
+      if (statusSel){
+        statusSel.disabled = !editingStatus;
+        statusSel.classList.toggle('is-editing', editingStatus);
+      }
+      if (saveStatusBtn){
+        saveStatusBtn.disabled = !editingStatus;
+      }
+      if (cancelStatusBtn){
+        cancelStatusBtn.disabled = !editingStatus;
+        cancelStatusBtn.style.visibility = editingStatus ? 'visible' : 'hidden';
+      }
+      if (editStatusBtn){
+        editStatusBtn.disabled = editingStatus;
+      }
+    }
+
+    setStatusEditing(false);
+
+    editStatusBtn?.addEventListener('click', ()=>{
+      console.log('[status] edit clicked', { activeChatId });
+      setStatusEditing(true);
+      statusSel?.focus();
+    });
+
+    cancelStatusBtn?.addEventListener('click', ()=>{
+      console.log('[status] cancel clicked', { activeChatId, statusOriginalValue });
+      if (statusSel){
+        const has = Array.from(statusSel.options || []).some(opt => opt.value === statusOriginalValue);
+        if (has) statusSel.value = statusOriginalValue;
+        else if (statusSel.options && statusSel.options.length) statusSel.selectedIndex = 0;
+      }
+    setStatusEditing(false);
+    });
+
+    statusSel?.addEventListener('change', ()=>{
+      console.log('[status] selection changed', { activeChatId, value: statusSel.value });
+    });
+              
+    saveStatusBtn?.addEventListener('click', async ()=>{
+      if (!editingStatus) return;
+      const id = (chatIdStatusInput?.value || '').trim();
+      if (!id){ alert('Enter chat_id'); return; }
+      const status = statusSel?.value || '';
+      console.log('[status] save clicked', { chatId: id, status });
+      if (statusOutEl) statusOutEl.textContent = 'Saving…';
+      if (saveStatusBtn) saveStatusBtn.disabled = true;
+      if (cancelStatusBtn) cancelStatusBtn.disabled = true;
+      if (statusSel) statusSel.disabled = true;
+      try {
+        const response = await fetch('/api/status', {
+          method:'POST',
+          headers:{'Content-Type':'application/json', ...H.headers()},
+          body:JSON.stringify({ chat_id:id, status })
+        });
+        const raw = await response.text();
+        let data = null;
+        if (raw){
+          try { data = JSON.parse(raw); }
+          catch { data = null; }
+        }
+        if(!response.ok){
+          const message = (data && (data.error || data.details)) || raw || 'unknown';
+          if (statusOutEl) statusOutEl.textContent = `Server error (${response.status}): ${message}`;
+          console.warn('[status] save failed', { chatId: id, status, message, statusCode: response.status });
+          return;
+        }
+        const payload = (data && typeof data === 'object') ? data : { chat_id: id, status };
+        const nextStatus = payload.status || status;
+        const updatedAt = payload.updated_at || new Date().toISOString();
+        console.log('[status] save success', { chatId: id, status: nextStatus, updatedAt });
+        if (statusSel){
+          const hasOption = Array.from(statusSel.options || []).some(opt => opt.value === nextStatus);
+          if (hasOption) statusSel.value = nextStatus;
+        }
+        if (statusOutEl) statusOutEl.textContent = H.fmtStatus(nextStatus);
+        const target = chatsCache.find(x=>String(x.id)===String(id));
+        if(target){
+          target.status = nextStatus;
+          target.status_updated_at = updatedAt;
+        }
+        const badge = document.querySelector(`.row[data-id="${id}"] .status-pill`);
+        if (badge){
+          let txtDisplay = H.fmtStatus(nextStatus);
+          const chat = chatsCache.find(x=>String(x.id)===String(id));
+          if (chat && chat.status === 'SoW signed'){ const d = daysSince(chat.status_updated_at); if (d) txtDisplay += ` · ${d}`; }
+          badge.textContent = txtDisplay;
+        }
+        statusOriginalValue = nextStatus || '';
+        setStatusEditing(false);
+        renderChats();
+        requestStatusToolSync('saveStatus');
+        try {
+          await loadChats({ silent: true, force: true });
+        } catch (reloadErr){
+          console.warn('[status] background reload failed', reloadErr);
+        }
+      }catch(e){
+        console.error('[status] save threw', e);
+        if (statusOutEl) statusOutEl.textContent = `Error: ${e.message||e}`;
+        setStatusEditing(true);
+      }
+    });
+
+    /* GRANTS — manual edit/save */
+    function setGrantEditing(isEditing){
+      editingGrant = Boolean(isEditing);
+      if (grantSelectEl){
+        grantSelectEl.disabled = !editingGrant;
+        grantSelectEl.classList.toggle('is-editing', editingGrant);
+      }
+      if (saveGrantBtn) saveGrantBtn.disabled = !editingGrant;
+      if (cancelGrantBtn) cancelGrantBtn.disabled = !editingGrant;
+      if (grantCancelRow) grantCancelRow.style.display = editingGrant ? 'grid' : 'none';
+      if (editGrantBtn) editGrantBtn.disabled = editingGrant;
+    }
+
+    setGrantEditing(false);
+
+    editGrantBtn?.addEventListener('click', async ()=>{
+      console.log('[grant] edit clicked', { activeChatId });
+      setGrantEditing(true);
+      await ensureGrantOptionsLoaded();
+      setGrantSelectValue(grantOriginalValue);
+      grantSelectEl?.focus();
+    });
+    cancelGrantBtn?.addEventListener('click', ()=>{
+      console.log('[grant] cancel clicked', { activeChatId, grantOriginalValue });
+      setGrantSelectValue(grantOriginalValue);
+      setGrantEditing(false);
+    });
+
+    grantSelectEl?.addEventListener('change', ()=>{
+      const value = grantSelectEl?.value ?? '';
+      
+      setGrantSelectValue(value);
+      console.log('[grant] selection changed', { activeChatId, value });
+    });
+    saveGrantBtn?.addEventListener('click', async ()=>{
+      if (!editingGrant) return;
+      const chat = getActiveChat();
+      const fallbackId = (chatIdGrantInput?.value || '').trim();
+      const chatId = chat?.id != null ? String(chat.id) : (fallbackId ? String(fallbackId) : null);
+      if (!chatId){ alert('Enter chat_id'); return; }
+      await ensureGrantOptionsLoaded();
+      const selected = grantSelectEl?.value || '';
+      const selectedOption = selected && grantSelectEl
+        ? Array.from(grantSelectEl.options || []).find(opt => opt.value === selected)
+        : null;
+      const selectedLabel = selectedOption?.dataset?.name || selectedOption?.textContent?.trim?.() || '';
+      const method = selected ? 'PUT' : 'DELETE';
+      const payload = selected
+        ? { chat_id: chatId, chat_tg_id: chatId, program_id: selected }
+        : { chat_id: chatId, chat_tg_id: chatId };
+      if (selected && selectedLabel){
+        payload.program_name = selectedLabel;
+      }
+      const buttons = [saveGrantBtn, cancelGrantBtn, grantSelectEl];
+      buttons.forEach(btn => { if (btn) btn.disabled = true; });
+      console.log('[grant] save clicked', { chatId, selected, method, payload });
+      if (grantOutEl) grantOutEl.textContent = 'Saving…';
+      try {
+        const response = await fetch('/api/chat-grant', {
+          method,
+          headers: { 'Content-Type': 'application/json', ...H.headers() },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(()=>({}));
+        if (!response.ok){
+          const msg = data?.error || data?.details || `Request failed (${response.status})`;
+          console.warn('[grant] save failed', { chatId, selected, msg, statusCode: response.status });
+          alert(`Failed to save grant: ${msg}`);
+          setGrantSelectValue(grantOriginalValue);
+          setGrantEditing(true);
+          if (grantOutEl){
+            const option = grantSelectEl ? Array.from(grantSelectEl.options || []).find(opt => opt.value === grantOriginalValue) : null;
+            const fallbackLabel = option?.dataset?.name || option?.textContent?.trim?.() || option?.textContent || '';
+            grantOutEl.textContent = grantOriginalValue ? (fallbackLabel || '— None —') : '— None —';
+          }
+          return;
+        }
+        const assignment = data?.assignment || null;
+        const resolvedProgramId = assignment?.program_id != null ? String(assignment.program_id) : (selected || '');
+        const option = grantSelectEl ? Array.from(grantSelectEl.options || []).find(opt => opt.value === resolvedProgramId) : null;
+        const resolvedProgramName = assignment?.program_name || option?.dataset?.name || option?.textContent?.trim?.() || option?.textContent || '';
+        const normalizedId = resolvedProgramId
+          ? (Number.isNaN(Number(resolvedProgramId)) ? resolvedProgramId : Number(resolvedProgramId))
+          : null;
+
+        grantOriginalValue = resolvedProgramId || '';
+        setGrantSelectValue(grantOriginalValue);
+        setGrantEditing(false);
+        
+        if (grantOutEl){
+          grantOutEl.textContent = resolvedProgramId ? (resolvedProgramName || '— None —') : '— None —';
+        }
+
+        const applyGrantToChat = (chatEntry)=>{
+          if (!chatEntry) return;
+          if (resolvedProgramId){
+            chatEntry.grant_id = normalizedId;
+            chatEntry.grant_name = resolvedProgramName;
+            chatEntry.grant = { id: normalizedId, name: resolvedProgramName };
+          } else {
+            chatEntry.grant_id = null;
+            chatEntry.grant_name = '';
+            chatEntry.grant = null;
+          }
+          };
+        applyGrantToChat(chat);
+        if (!chat){
+          const cached = chatsCache.find(x=>String(x.id)===String(chatId));
+          applyGrantToChat(cached);
+        }
+        
+        renderChats();
+        requestStatusToolSync('saveGrant');
+        try {
+          await loadChats({ silent: true, force: true });
+        } catch (reloadErr){
+          console.warn('[grant] background reload failed', reloadErr);
+        }
+      } catch (err){
+        console.error('[grant] save threw', err);
+        alert(`Failed to save grant: ${err?.message || err}`);
+        setGrantSelectValue(grantOriginalValue);
+        setGrantEditing(true);
+        if (grantOutEl){
+          const option = grantSelectEl ? Array.from(grantSelectEl.options || []).find(opt => opt.value === grantOriginalValue) : null;
+          const fallbackLabel = option?.dataset?.name || option?.textContent?.trim?.() || option?.textContent || '';
+          grantOutEl.textContent = grantOriginalValue ? (fallbackLabel || '— None —') : '— None —';
+        }
+      } finally {
+        buttons.forEach(btn => { if (btn) btn.disabled = !editingGrant; });
+      }
+    });
+              
+    /* BLURB */
+      if (getBlurbBtn) getBlurbBtn.onclick = async ()=>{
+        const id = (chatIdCompanyInput?.value || '').trim();
+      if(!id) return alert('Enter chat_id');
+      if (blurbOutEl) blurbOutEl.textContent='Loading…';
+      try{
+        const r=await fetch(`/api/company-blurb?chat_id=${encodeURIComponent(id)}`, { headers:H.headers() });
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok){ if (blurbOutEl) blurbOutEl.textContent=`Server error (${r.status}): ${data?.error||'unknown'}`; return; }
+        if (blurbOutEl) blurbOutEl.textContent = data.text || data.blurb || data.note || 'No blurb found.';
+      }catch(e){ if (blurbOutEl) blurbOutEl.textContent = `Error: ${e.message||e}`; }
+    };
+
+    /* PER-CHAT DATES */
+    const chatIdDatesProdInput = document.getElementById('chatIdDatesProd');
+    const chatIdDatesCampInput = document.getElementById('chatIdDatesCamp');
+    const datesOutProd = document.getElementById('datesOutProd');
+    const datesOutCamp = document.getElementById('datesOutCamp');
+    const manualDateProdInput = document.getElementById('manualDateProd');
+    const manualDateCampInput = document.getElementById('manualDateCamp');
+    const editDateProdBtn = document.getElementById('editDateProd');
+    const editDateCampBtn = document.getElementById('editDateCamp');
+
+    function describeDatePayload(data){
+      if (!data) return { display: 'Unknown', label: null, source: 'unknown' };
+      const rawLabel = data.label ?? data.date ?? data.text ?? null;
+      const normalizedLabel = rawLabel != null ? String(rawLabel).trim() : '';
+      const loweredLabel = normalizedLabel.toLowerCase();
+      const hasLabel = Boolean(normalizedLabel) && loweredLabel !== 'unknown';
+      const rawSource = data?.source != null ? String(data.source).toLowerCase() : '';
+      let source = rawSource || (hasLabel ? 'auto' : 'unknown');
+      if (!hasLabel) {
+        if (rawSource === 'manual') {
+          source = 'unknown';
+        }
+        return { display: 'Unknown', label: null, source };
+      }
+      const label = normalizedLabel;
+      let suffix = '';
+      if (source === 'manual') suffix = ' (manual override)';
+      else if (source === 'unknown') suffix = ' (no data)';
+      return { display: `${label}${suffix}`, label, source };
+    }
+
+    function applyDateResult({ data, outEl, inputEl }){
+      const { display, label, source } = describeDatePayload(data || {});
+      if (outEl) outEl.textContent = display;
+      if (inputEl){
+        if (source === 'manual'){
+          inputEl.value = label || '';
+        } else if (!label) {
+          inputEl.value = '';
+        }
+      }
+    }
+
+    async function fetchDate({ chatId, endpoint, outEl, inputEl }){
+      if (!chatId) return alert('Enter chat_id');
+      if (outEl) outEl.textContent = 'Loading…';
+      try {
+        const r = await fetch(`${endpoint}?chat_id=${encodeURIComponent(chatId)}`, { headers: H.headers() });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          if (outEl) outEl.textContent = `Server error (${r.status}): ${data?.error || 'unknown'}`;
+          return;
+        }
+        applyDateResult({ data, outEl, inputEl });
+      } catch (err) {
+        if (outEl) outEl.textContent = `Error: ${err.message || err}`;
+      }
+    }
+
+    const getDatesProdBtn = document.getElementById('getDatesProd');
+    if (getDatesProdBtn) getDatesProdBtn.onclick = async ()=>{
+      const id = chatIdDatesProdInput?.value?.trim();
+      await fetchDate({ chatId: id, endpoint: '/api/date-product', outEl: datesOutProd, inputEl: manualDateProdInput });
+    };
+    
+    const getDatesCampBtn = document.getElementById('getDatesCamp');
+    if (getDatesCampBtn) getDatesCampBtn.onclick = async ()=>{
+      const id = chatIdDatesCampInput?.value?.trim();
+      await fetchDate({ chatId: id, endpoint: '/api/date-campaign', outEl: datesOutCamp, inputEl: manualDateCampInput });
+    };
+
+    if (editDateProdBtn) editDateProdBtn.onclick = async ()=>{
+      const chatId = chatIdDatesProdInput?.value?.trim();
+      if (!chatId) return alert('Enter chat_id');
+      const value = manualDateProdInput?.value?.trim() || '';
+      const btnLabel = editDateProdBtn.textContent;
+      editDateProdBtn.disabled = true;
+      editDateProdBtn.textContent = 'Saving…';
+      try {
+        const payload = { chat_id: chatId, date: value };
+        const r = await fetch('/api/date-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...H.headers() },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          alert(`Failed to save: ${data?.error || 'server error'}`);
+          return;
+        }
+        applyDateResult({ data, outEl: datesOutProd, inputEl: manualDateProdInput });
+        try {
+          await loadTimelines();
+        } catch (timelineErr) {
+          console.warn('[date-product] refresh timeline failed', timelineErr);
+        }
+      } catch (err) {
+        alert(`Failed to save: ${err.message || err}`);
+      } finally {
+        editDateProdBtn.disabled = false;
+        editDateProdBtn.textContent = btnLabel;
+      }
+    };
+
+    if (editDateCampBtn) editDateCampBtn.onclick = async ()=>{
+      const chatId = chatIdDatesCampInput?.value?.trim();
+      if (!chatId) return alert('Enter chat_id');
+      const value = manualDateCampInput?.value?.trim() || '';
+      const btnLabel = editDateCampBtn.textContent;
+      editDateCampBtn.disabled = true;
+      editDateCampBtn.textContent = 'Saving…';
+      try {
+        const payload = { chat_id: chatId, date: value };
+        const r = await fetch('/api/date-campaign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...H.headers() },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          alert(`Failed to save: ${data?.error || 'server error'}`);
+          return;
+        }
+        applyDateResult({ data, outEl: datesOutCamp, inputEl: manualDateCampInput });
+        try {
+          await loadTimelines();
+        } catch (timelineErr) {
+          console.warn('[date-campaign] refresh timeline failed', timelineErr);
+        }
+      } catch (err) {
+        alert(`Failed to save: ${err.message || err}`);
+      } finally {
+        editDateCampBtn.disabled = false;
+        editDateCampBtn.textContent = btnLabel;
+      }
+    };
+
+    /* NEXT STEPS (AI) */
+    document.getElementById('getNext').onclick = async ()=>{
+      const id = document.getElementById('chatIdNext').value.trim();
+      if (!id) return alert('Enter chat_id');
+      const out = document.getElementById('nextOut'); out.textContent = 'Thinking…';
+      try{
+        const r = await fetch(`/api/next-steps?chat_id=${encodeURIComponent(id)}&limit=120`, { headers: H.headers() });
+        const data = await r.json().catch(()=>({}));
+        if (!r.ok) { out.textContent = `Server error (${r.status}): ${data?.error||'unknown'}${data?.stage?` [${data.stage}]`:''}`; return; }
+        out.textContent = data.text || '(no suggestions)';
+      }catch(e){ out.textContent = `Error: ${e.message||e}`; }
+    };
+
+        /* Team tasks */
+    const teamSelectEl = document.getElementById('teamSelect');
+    const taskSearchEl = document.getElementById('taskSearch');
+    const taskListEl = document.getElementById('taskList');
+    const completedListEl = document.getElementById('completedTaskList');
+    const taskMessageEl = document.getElementById('taskMessage');
+    const completedMessageEl = document.getElementById('completedTasksMessage');
+    const newTaskTextEl = document.getElementById('newTaskText');
+    const newTaskAssigneeEl = document.getElementById('newTaskAssignee');
+    const addTaskBtnEl = document.getElementById('addTaskBtn');
+    const newTaskHintEl = document.getElementById('newTaskHint');
+    const defaultNewTaskHint = 'Tasks appear for the teammate you assign them to.';
+
+    const teamTasks = {};
+    let isHydratingTasks = false;
+    let hydrationContext = null;
+
+    function normalizeHandle(handle = ''){
+      return String(handle || '').trim().replace(/^@/, '');
+    }
+
+      function toLowerHandle(handle = ''){
+      const normalized = normalizeHandle(handle);
+      return normalized ? normalized.toLowerCase() : '';
+    }
+
+    const teammateDirectory = (() => {
+      const meta = {};
+      const options = document.querySelectorAll('#teamSelect option, #newTaskAssignee option');
+      options.forEach(opt => {
+        const raw = (opt?.value || '').trim();
+        if(!raw) return;
+        const username = normalizeHandle(raw);
+        if(!username) return;
+        const key = username.toLowerCase();
+        if(!meta[key]) meta[key] = { username, user_id: null, value: raw };
+        if(!meta[key].value) meta[key].value = raw;
+        const userIdAttr = opt.getAttribute('data-user-id');
+        if(userIdAttr && meta[key].user_id == null){
+          const parsed = Number(userIdAttr);
+          if(Number.isSafeInteger(parsed)){
+            meta[key].user_id = parsed;
+          }
+        }
+      });
+      return meta;
+    })();
+
+    function ensureTaskMetadata(task, fallbackHandle = ''){
+      if(!task) return task;
+
+      if(!task.text && task.description){
+        task.text = task.description;
+      }
+
+      const derivedHandle = task.username || task.assignee || task.handle || fallbackHandle;
+      const normalized = normalizeHandle(derivedHandle);
+      if(normalized){
+        task.username = normalized;
+      }
+
+      if(task.user_id != null){
+        const parsedId = Number(task.user_id);
+        task.user_id = Number.isSafeInteger(parsedId) ? parsedId : null;
+      }
+
+      if(task.user_id == null && normalized){
+        const directoryEntry = teammateDirectory[normalized.toLowerCase()];
+        if(directoryEntry && directoryEntry.user_id != null){
+          task.user_id = directoryEntry.user_id;
+        }
+      }
+
+      return task;
+    }
+
+    function teammateOptionValue(handle = ''){
+      const normalized = normalizeHandle(handle);
+      if(!normalized) return '';
+      const directoryEntry = teammateDirectory[normalized.toLowerCase()];
+      if(directoryEntry?.value) return directoryEntry.value;
+      const options = document.querySelectorAll('#teamSelect option, #newTaskAssignee option');
+      for(const opt of options){
+        if(normalizeHandle(opt?.value || '') === normalized){
+          return opt.value;
+        }
+      }
+      return handle && handle.startsWith('@') ? handle : `@${normalized}`;
+    }
+
+    async function logTaskCompletion(task, teammateHandle = ''){
+      const enriched = ensureTaskMetadata(task, teammateHandle);
+      if(!enriched) return;
+
+      const normalizedUserId = (typeof enriched.user_id === 'number' && Number.isSafeInteger(enriched.user_id)) ? enriched.user_id : null;
+      const payload = {
+        tg_username: normalizeHandle(enriched.username),
+        tg_user_id: normalizedUserId,
+        description: enriched.text || ''
+      };
+
+      if(!payload.tg_username || !payload.description){
+        console.warn('Skipping task log — incomplete payload', payload);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/log-task', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...H.headers() },
+          body: JSON.stringify(payload)
+        });
+
+        if(!response.ok){
+          const errBody = await response.text().catch(()=> '');
+          console.warn('log-task request failed', response.status, errBody);
+        }
+      } catch (error) {
+        console.error('log-task network error', error);
+      }
+    }
+
+      async function notifyTaskAssignment(assigneeHandle, taskText, taskId){
+      const handle = (assigneeHandle || '').trim();
+      const text = (taskText || '').trim();
+      if(!handle || !text){
+        return { ok:false, error:'INVALID_INPUT', message:'Missing handle or task text.' };
+      }
+
+      try{
+        if(!Array.isArray(chatsCache) || !chatsCache.length){
+          await loadChats();
+        }
+      }catch(e){
+        console.warn('Failed to load chats before notifying:', e);
+      }
+
+      const normalizedHandle = handle.replace(/^@/, '').toLowerCase();
+      const chat = (chatsCache || []).find(c => (c.username || '').toLowerCase() === normalizedHandle);
+
+      if(!chat){
+        const msg = `No chat found for ${handle}.`;
+        console.warn(msg);
+        return { ok:false, error:'NO_CHAT', message: msg };
+      }
+
+      const assignerName = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : '';
+      const assignerHandle = user?.username ? `@${user.username}` : '';
+      const assigneeLabel = optionLabelFor(handle) || chat.title || handle;
+
+      try{
+        const r = await fetch('/api/task-notify', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            ...H.headers()
+          },
+          body: JSON.stringify({
+            assignee_chat_id: chat.id,
+            assignee_username: chat.username ? `@${chat.username}` : handle,
+            assignee_display: assigneeLabel,
+            task_text: text,
+            task_id: taskId,
+            assigner_name: assignerName,
+            assigner_username: assignerHandle
+          })
+        });
+
+        const data = await r.json().catch(()=>({}));
+        if(!r.ok){
+          console.warn('Task notify failed', r.status, data);
+          return { ok:false, error:data?.error || 'SERVER_ERROR', message:data?.message || 'Failed to send notification.' };
+        }
+
+        return { ok:true, result:data?.result || null };
+      }catch(e){
+        console.error('Task notify network error', e);
+        return { ok:false, error:'NETWORK_ERROR', message:e?.message || String(e) };
+      }
+    }
+    
+    function ensureTeamBucket(id){
+      if(!id) return null;
+      if(!teamTasks[id]) teamTasks[id] = { active: [], completed: [] };
+      return teamTasks[id];
+    }
+
+    function sortTeamBuckets(){
+      Object.values(teamTasks).forEach(bucket => {
+        if(!Array.isArray(bucket.active)) bucket.active = [];
+        if(!Array.isArray(bucket.completed)) bucket.completed = [];
+        bucket.active.sort((a, b) => {
+          const aTime = new Date(a.createdAt || 0).getTime();
+          const bTime = new Date(b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+        bucket.completed.sort((a, b) => {
+          const aTime = new Date(a.completedAt || a.createdAt || 0).getTime();
+          const bTime = new Date(b.completedAt || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+      });
+    }
+
+    function currentHydrationOption(){
+      return hydrationContext?.optionValue || teamSelectEl?.value || '';
+    }
+
+    function currentHydrationHandle(){
+      if(hydrationContext?.normalizedHandle){
+        return hydrationContext.normalizedHandle;
+      }
+      return normalizeHandle(currentHydrationOption());
+    }
+
+    function showActiveTasks(rows = [], optionValue = currentHydrationOption(), normalizedHandle = currentHydrationHandle()){
+      if(!optionValue) return;
+      const ensureCompletedArray = (bucket) => {
+        if(!Array.isArray(bucket.completed)) bucket.completed = [];
+      };
+      const cleared = new Set();
+      const ensureClearedBucket = (value) => {
+        const key = value || optionValue;
+        const bucket = ensureTeamBucket(key);
+        if(!bucket) return bucket;
+        if(!cleared.has(key)){
+          bucket.active = [];
+          ensureCompletedArray(bucket);
+          cleared.add(key);
+        }
+        return bucket;
+      };
+
+      ensureClearedBucket(optionValue);
+
+      rows.forEach(row => {
+        if(!row) return;
+        const rowHandle = normalizeHandle(row.tg_username || normalizedHandle || optionValue);
+        const resolvedOptionValue = teammateOptionValue(rowHandle) || optionValue;
+        const bucket = ensureClearedBucket(resolvedOptionValue);
+        if(!bucket) return;
+
+        const baseId = row.id ?? row.task_id ?? row.taskId ?? row.uuid ?? `task-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const createdAt = row.created_at || row.createdAt || row.assigned_at || null;
+        const task = ensureTaskMetadata({
+          id: String(baseId),
+          text: row.description || row.text || '',
+          username: rowHandle,
+          user_id: row.tg_user_id ?? row.user_id ?? null,
+          createdAt
+        }, resolvedOptionValue);
+        task.serverId = row.id ?? task.serverId ?? null;
+        if(!task.createdAt){
+          task.createdAt = createdAt || new Date().toISOString();
+        }
+        bucket.active.push(task);
+      });
+
+      sortTeamBuckets();
+    }
+
+    function showPastTasks(rows = [], optionValue = currentHydrationOption(), normalizedHandle = currentHydrationHandle()){
+      if(!optionValue) return;
+      const ensureActiveArray = (bucket) => {
+        if(!Array.isArray(bucket.active)) bucket.active = [];
+      };
+      const cleared = new Set();
+      const ensureClearedBucket = (value) => {
+        const key = value || optionValue;
+        const bucket = ensureTeamBucket(key);
+        if(!bucket) return bucket;
+        ensureActiveArray(bucket);
+        if(!Array.isArray(bucket.completed)) bucket.completed = [];
+        if(!cleared.has(key)){
+          bucket.completed = [];
+          cleared.add(key);
+        }
+        return bucket;
+      };
+
+      ensureClearedBucket(optionValue);
+
+      rows.forEach(row => {
+        if(!row) return;
+        const rowHandle = normalizeHandle(row.tg_username || normalizedHandle || optionValue);
+        const resolvedOptionValue = teammateOptionValue(rowHandle) || optionValue;
+        const bucket = ensureClearedBucket(resolvedOptionValue);
+        if(!bucket) return;
+
+        const baseId = row.id ?? row.task_id ?? row.taskId ?? row.uuid ?? `past-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const createdAt = row.created_at || row.createdAt || null;
+        const completedAt = row.completed_at || row.completedAt || null;
+        const task = ensureTaskMetadata({
+          id: String(baseId),
+          text: row.description || row.text || '',
+          username: rowHandle,
+          user_id: row.tg_user_id ?? row.user_id ?? null,
+          createdAt,
+          completedAt
+        }, resolvedOptionValue);
+        task.serverId = row.id ?? task.serverId ?? null;
+        if(!task.completedAt){
+          task.completedAt = completedAt || createdAt || new Date().toISOString();
+        }
+        if(!task.createdAt && createdAt){
+          task.createdAt = createdAt;
+        }
+        bucket.completed.push(task);
+      });
+
+      sortTeamBuckets();
+    }
+
+    function escapeHtml(str = ''){
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatDateTime(iso){
+      if(!iso) return '';
+      const dt = new Date(iso);
+      if(Number.isNaN(dt.getTime())) return '';
+      return dt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function optionLabelFor(value){
+      const opts = document.querySelectorAll('#teamSelect option, #newTaskAssignee option');
+      for(const opt of opts){
+        if(opt.value === value) return opt.textContent.trim();
+      }
+      return value;
+    }
+
+    async function hydrateTasksFromServer(teammateHandle = ''){
+      const normalizedHandle = normalizeHandle(teammateHandle || teamSelectEl?.value || '');
+      if(!normalizedHandle){
+        renderTasks();
+        return;
+      }
+
+      const optionValue = teammateOptionValue(normalizedHandle);
+      if(!optionValue){
+        renderTasks();
+        return;
+      }
+
+      if(isHydratingTasks) return;
+      isHydratingTasks = true;
+
+      const lowerHandle = toLowerHandle(normalizedHandle);
+      hydrationContext = { optionValue, normalizedHandle };
+
+      try{
+        if(teamSelectEl && teamSelectEl.value === optionValue){
+          if(taskMessageEl){
+            taskMessageEl.textContent = 'Loading tasks…';
+            taskMessageEl.style.display = 'block';
+            taskMessageEl.dataset.sticky = 'true';
+          }
+          if(completedMessageEl){
+            completedMessageEl.textContent = 'Loading past tasks…';
+            completedMessageEl.style.display = 'block';
+            completedMessageEl.dataset.sticky = 'true';
+          }
+        }
+
+        const [activeResponse, pastResponse] = await Promise.all([
+          fetch(`/api/team-tasks?username=${encodeURIComponent(lowerHandle)}`, { headers: H.headers() }),
+          fetch(`/api/team-tasks?username=${encodeURIComponent(lowerHandle)}&past=true`, { headers: H.headers() })
+        ]);
+
+        const [activeData, pastData] = await Promise.all([
+          activeResponse.json().catch(()=>({})),
+          pastResponse.json().catch(()=>({}))
+        ]);
+
+        const activeRows = Array.isArray(activeData?.tasks)
+          ? activeData.tasks
+          : Array.isArray(activeData?.active)
+            ? activeData.active
+            : [];
+        activeData.tasks = Array.isArray(activeRows) ? activeRows : [];
+
+        const pastRows = Array.isArray(pastData?.pastTasks)
+          ? pastData.pastTasks
+          : [];
+        pastData.pastTasks = Array.isArray(pastRows) ? pastRows : [];
+
+        showActiveTasks(activeResponse.ok ? activeData.tasks : []);
+        if(activeResponse.ok){
+          if(teamSelectEl && teamSelectEl.value === optionValue && taskMessageEl){
+            delete taskMessageEl.dataset.sticky;
+          }
+          
+        }else{
+          console.warn('Failed to load tasks from server', activeResponse.status, activeData);
+          if(teamSelectEl && teamSelectEl.value === optionValue && taskMessageEl){
+            taskMessageEl.textContent = 'Failed to load tasks. Please try again.';
+            taskMessageEl.style.display = 'block';
+            taskMessageEl.dataset.sticky = 'true';
+          }
+        }
+
+        showPastTasks(pastResponse.ok ? pastData.pastTasks : []);
+        if(pastResponse.ok){
+          if(teamSelectEl && teamSelectEl.value === optionValue && completedMessageEl){
+            delete completedMessageEl.dataset.sticky;
+          }
+        }else{
+          console.warn('Failed to load past tasks from server', pastResponse.status, pastData);
+          if(teamSelectEl && teamSelectEl.value === optionValue && completedMessageEl){
+            completedMessageEl.textContent = 'Failed to load past tasks. Please try again.';
+            completedMessageEl.style.display = 'block';
+            completedMessageEl.dataset.sticky = 'true';
+          }
+        }
+
+        renderTasks();
+      }catch(e){
+        console.error('Failed to hydrate tasks from server', e);
+        if(teamSelectEl && teamSelectEl.value === optionValue){
+          if(taskMessageEl){
+            taskMessageEl.textContent = 'Failed to load tasks. Please try again.';
+            taskMessageEl.style.display = 'block';
+            taskMessageEl.dataset.sticky = 'true';
+          }
+          if(completedMessageEl){
+            completedMessageEl.textContent = 'Failed to load past tasks. Please try again.';
+            completedMessageEl.style.display = 'block';
+            completedMessageEl.dataset.sticky = 'true';
+          }
+        }
+      }finally{
+        hydrationContext = null;
+        isHydratingTasks = false;
+      }
+    }
+
+    function renderTasks(){
+      if(!taskListEl || !completedListEl) return;
+      const teammate = teamSelectEl?.value || '';
+      const query = (taskSearchEl?.value || '').trim().toLowerCase();
+
+      taskListEl.innerHTML = '';
+      completedListEl.innerHTML = '';
+
+      if(!teammate){
+        if(taskMessageEl) delete taskMessageEl.dataset.sticky;
+        if(completedMessageEl) delete completedMessageEl.dataset.sticky;
+      }
+
+      if(taskMessageEl){
+        const sticky = taskMessageEl?.dataset?.sticky === 'true';
+        if(!sticky){
+          taskMessageEl.textContent = 'Choose a teammate to see their tasks.';
+          taskMessageEl.style.display = teammate ? 'none' : 'block';
+        }
+      }
+      if(completedMessageEl){
+        const sticky = completedMessageEl?.dataset?.sticky === 'true';
+        if(!sticky){
+          completedMessageEl.textContent = 'Choose a teammate to see their tasks.';
+          completedMessageEl.style.display = teammate ? 'none' : 'block';
+        }
+      }
+
+      if(!teammate) return;
+
+      const bucket = ensureTeamBucket(teammate);
+      const activeWithMeta = bucket.active.map(task => ensureTaskMetadata(task, teammate));
+      const completedWithMeta = bucket.completed.map(task => ensureTaskMetadata(task, teammate));
+      const filteredActive = activeWithMeta.filter(task => !query || (task.text || '').toLowerCase().includes(query));
+      const filteredCompleted = completedWithMeta.filter(task => !query || (task.text || '').toLowerCase().includes(query));
+
+      if(!filteredActive.length){
+        taskListEl.innerHTML = `<li class="task-empty">${query ? 'No tasks match your search.' : 'No tasks yet — assign one below.'}</li>`;
+      } else {
+        taskListEl.innerHTML = filteredActive.map(task => `<li class="task-item"><label><input type="checkbox" class="task-check" data-task-id="${task.id}" /><span>${escapeHtml(task.text)}</span></label></li>`).join('');
+      }
+
+      if(!filteredCompleted.length){
+        completedListEl.innerHTML = `<li class="task-empty">${query ? 'No completed tasks match your search.' : 'No completed tasks yet.'}</li>`;
+      } else {
+        completedListEl.innerHTML = filteredCompleted.map(task => `<li class="task-item completed"><div><div>${escapeHtml(task.text)}</div><div class="task-meta">Completed ${formatDateTime(task.completedAt)}</div></div></li>`).join('');
+      }
+
+      taskListEl.querySelectorAll('.task-check').forEach(box => {
+        box.addEventListener('change', (event) => {
+          if(!event.target.checked) return;
+          const id = event.target.getAttribute('data-task-id');
+          completeTask(teammate, id);
+        });
+      });
+    }
+
+    async function persistTaskAssignment(task, teammateHandle = ''){
+      const enriched = ensureTaskMetadata({ ...task }, teammateHandle);
+      const payload = {
+        tg_username: normalizeHandle(enriched?.username || teammateHandle),
+        tg_user_id: (typeof enriched?.user_id === 'number' && Number.isSafeInteger(enriched.user_id)) ? enriched.user_id : null,
+        description: enriched?.text || ''
+      };
+
+      if(!payload.tg_username || !payload.description){
+        return { ok:false, error:'Missing username or description.' };
+      }
+
+      try{
+        const response = await fetch('/api/team-tasks', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', ...H.headers() },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(()=>({}));
+        if(!response.ok){
+          const reason = data?.error || data?.message || `Server error (${response.status})`;
+          console.warn('Failed to persist task', response.status, data);
+          return { ok:false, error:reason };
+        }
+
+        const saved = data?.task || null;
+        if(saved){
+          task.id = String(saved.id ?? task.id);
+          task.serverId = saved.id ?? task.serverId ?? null;
+          task.username = saved.tg_username || task.username;
+          task.user_id = saved.tg_user_id ?? task.user_id ?? null;
+          task.text = saved.description || task.text;
+          task.createdAt = saved.created_at || task.createdAt || new Date().toISOString();
+          ensureTaskMetadata(task, teammateHandle);
+          renderTasks();
+        }
+
+        return { ok:true, task:saved };
+      }catch(e){
+        console.error('persistTaskAssignment error', e);
+        return { ok:false, error:e?.message || String(e) };
+      }
+    }
+
+    async function syncTaskCompletion(task){
+      const rawId = task?.serverId ?? task?.id;
+      const numericId = Number(rawId);
+      if(!Number.isSafeInteger(numericId)) return;
+      try{
+        const response = await fetch('/api/team-tasks', {
+          method:'DELETE',
+          headers:{ 'Content-Type':'application/json', ...H.headers() },
+          body: JSON.stringify({ id: numericId })
+        });
+        if(!response.ok){
+          const text = await response.text().catch(()=> '');
+          console.warn('Failed to remove task from server', response.status, text);
+        }
+      }catch(e){
+        console.error('syncTaskCompletion error', e);
+      }
+    }
+
+    async function completeTask(teammate, id){
+      const bucket = ensureTeamBucket(teammate);
+      if(!bucket) return;
+      const idx = bucket.active.findIndex(task => String(task.id) === String(id));
+      if(idx === -1) return;
+      const [task] = bucket.active.splice(idx, 1);
+      task.completedAt = new Date().toISOString();
+      const completedTask = ensureTaskMetadata(task, teammate);
+      bucket.completed.unshift(completedTask);
+      renderTasks();
+      await Promise.allSettled([
+        logTaskCompletion(completedTask, teammate),
+        syncTaskCompletion(completedTask)
+      ]);
+      hydrateTasksFromServer(teammate);
+    }
+
+    async function handleAssignTask(){
+      if(!newTaskTextEl) return;
+      const text = newTaskTextEl.value.trim();
+      const assignee = (newTaskAssigneeEl?.value || teamSelectEl?.value || '').trim();
+
+      if(!text){
+        if(newTaskHintEl) newTaskHintEl.textContent = 'Please describe the task before assigning it.';
+        return;
+      }
+      if(!assignee){
+        if(newTaskHintEl) newTaskHintEl.textContent = 'Please choose who should take this task.';
+        return;
+      }
+
+      const label = optionLabelFor(assignee);
+      const bucket = ensureTeamBucket(assignee);
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const nowIso = new Date().toISOString();
+      const task = ensureTaskMetadata({ id: tempId, text, createdAt: nowIso, username: assignee }, assignee);
+      task.serverId = task.serverId ?? null;
+      bucket.active.unshift(task);
+      if(teamSelectEl && teamSelectEl.value === assignee){
+        renderTasks();
+      }
+
+      if(newTaskHintEl) newTaskHintEl.textContent = `Task assigned to ${label}. Saving…`;
+
+      const saveResult = await persistTaskAssignment(task, assignee);
+      if(!saveResult?.ok){
+        const reason = String(saveResult?.error || 'Task could not be saved.');
+        const idx = bucket.active.indexOf(task);
+        if(idx !== -1){
+          bucket.active.splice(idx, 1);
+        }
+        if(teamSelectEl && teamSelectEl.value === assignee){
+          renderTasks();
+        }
+        if(newTaskHintEl) newTaskHintEl.textContent = `Task not saved: ${reason}`;
+        return;
+      }
+
+
+      newTaskTextEl.value = '';
+      if(newTaskAssigneeEl) newTaskAssigneeEl.value = assignee;
+
+      if(newTaskHintEl) newTaskHintEl.textContent = `Task assigned to ${label}. Sending notification…`;
+      if(teamSelectEl && teamSelectEl.value === assignee){
+        renderTasks();
+      }
+
+      const notifyPromise = notifyTaskAssignment(assignee, task.text, task.id);
+      if(newTaskHintEl){
+        const result = await notifyPromise;
+        if(result?.ok){
+          newTaskHintEl.textContent = `Task assigned to ${label}. Notification sent.`;
+        }else{
+          const reason = result?.message || result?.error || 'Notification failed.';
+          newTaskHintEl.textContent = `Task assigned to ${label}. ${reason}`;
+        }
+      }else{
+        await notifyPromise;
+      }
+      hydrateTasksFromServer(assignee);
+    }
+
+    if(addTaskBtnEl) addTaskBtnEl.addEventListener('click', handleAssignTask);
+    if(taskSearchEl) taskSearchEl.addEventListener('input', ()=>renderTasks());
+    if(teamSelectEl) teamSelectEl.addEventListener('change', ()=>{
+      if(taskSearchEl) taskSearchEl.value = '';
+      if(newTaskAssigneeEl){
+        newTaskAssigneeEl.value = teamSelectEl.value || '';
+      }
+      renderTasks();
+      if(newTaskHintEl) newTaskHintEl.textContent = defaultNewTaskHint;
+            hydrateTasksFromServer(teamSelectEl.value || '');
+    });
+    if(newTaskTextEl) newTaskTextEl.addEventListener('input', ()=>{
+      if(newTaskHintEl) newTaskHintEl.textContent = defaultNewTaskHint;
+    });
+    if(newTaskAssigneeEl) newTaskAssigneeEl.addEventListener('change', ()=>{
+      if(newTaskHintEl) newTaskHintEl.textContent = defaultNewTaskHint;
+    });
+    if(newTaskAssigneeEl && teamSelectEl){
+      newTaskAssigneeEl.value = teamSelectEl.value || '';
+    }
+    if(newTaskHintEl) newTaskHintEl.textContent = defaultNewTaskHint;
+    renderTasks();
+    hydrateTasksFromServer(teamSelectEl?.value || '');
+    
+    /* AI Assistant */
+    const aiChatSelect = document.getElementById('aiChatSelect');
+    const aiPromptInput = document.getElementById('aiPromptInput');
+    const aiResult = document.getElementById('aiResult');
+    const askAiBtn = document.getElementById('askAiBtn');
+    const defaultAiResultText = 'Response will appear here…';
+    let aiCachedChats = [];
+    let aiCachedChatsPromise = null;
+
+    function resetAiUi(){
+      if (aiPromptInput) aiPromptInput.value = '';
+      if (aiResult) aiResult.textContent = defaultAiResultText;
+      if (askAiBtn) askAiBtn.disabled = false;
+    }
+
+    function normalizeLiteChat(item){
+      if (!item || typeof item !== 'object') return null;
+      const idRaw = item.chat_id ?? item.id;
+      if (idRaw == null) return null;
+      const id = String(idRaw).trim();
+      if (!id) return null;
+      const title = typeof item.title === 'string' ? item.title : '';
+      const username = typeof item.username === 'string' ? item.username : '';
+      const lastSyncedAt = item.last_synced_at ?? item.lastSyncedAt ?? item.last_synced ?? null;
+      return {
+        id,
+        chat_id: id,
+        title,
+        username,
+        last_synced_at: lastSyncedAt,
+      };
+    }
+
+    function normalizeLiteChatList(payload){
+      if (!Array.isArray(payload)) return [];
+      return payload.map(normalizeLiteChat).filter(Boolean);
+    }
+
+    function mergeLiteChatLists(primary = [], secondary = []){
+      const map = new Map();
+      const order = [];
+      const push = (list = []) => {
+        for (const entry of list){
+          const normalized = normalizeLiteChat(entry);
+          if (!normalized) continue;
+          const existing = map.get(normalized.id);
+          if (!existing){
+            map.set(normalized.id, { ...normalized });
+            order.push(normalized.id);
+          }else{
+            if (!existing.title && normalized.title) existing.title = normalized.title;
+            if (!existing.username && normalized.username) existing.username = normalized.username;
+            if (!existing.last_synced_at && normalized.last_synced_at) {
+              existing.last_synced_at = normalized.last_synced_at;
+            } else if (normalized.last_synced_at && existing.last_synced_at){
+              const existingTs = new Date(existing.last_synced_at).getTime();
+              const incomingTs = new Date(normalized.last_synced_at).getTime();
+              if (Number.isFinite(incomingTs) && (!Number.isFinite(existingTs) || incomingTs > existingTs)) {
+                existing.last_synced_at = normalized.last_synced_at;
+              }
+            }
+          }
+        }
+      };
+      push(primary);
+      push(secondary);
+      return order
+        .map(id => map.get(id))
+        .sort((a,b)=>{
+          const aTimeRaw = a?.last_synced_at ? new Date(a.last_synced_at).getTime() : NaN;
+          const bTimeRaw = b?.last_synced_at ? new Date(b.last_synced_at).getTime() : NaN;
+          const aTime = Number.isFinite(aTimeRaw) ? aTimeRaw : 0;
+          const bTime = Number.isFinite(bTimeRaw) ? bTimeRaw : 0;
+          if (aTime !== bTime) return bTime - aTime;
+          return String(a.id).localeCompare(String(b.id));
+        });
+    }
+    async function ensureChatsCache({ silent = true, force = false } = {}){
+      if (Array.isArray(chatsCache) && chatsCache.length && !force){
+        console.log('[ensureChatsCache] using cached chats', { length: chatsCache.length });
+        return chatsCache;
+      }
+
+      if (chatsCachePromise){
+        if (!force){
+          console.log('[ensureChatsCache] awaiting existing chats load');
+          try {
+            await chatsCachePromise;
+          } catch (err) {
+            console.warn('[ensureChatsCache] in-flight chats load rejected', err);
+          }
+          return chatsCache;
+        }
+        try {
+          await chatsCachePromise;
+        } catch (err) {
+          console.warn('[ensureChatsCache] previous chats load rejected before force refresh', err);
+        }
+      }
+
+      if (typeof loadChats !== 'function'){
+        return chatsCache;
+      }
+      try {
+        await loadChats({ silent, force });
+      } catch (err) {
+        console.warn('[ensureChatsCache] failed to hydrate chats cache', err);
+      }
+      return chatsCache;
+    }
+              
+    function aiSelectFallbackList(){
+      return mergeLiteChatLists(aiCachedChats, chatsCache);
+    }
+
+    function populateAiChatSelect(list = null, options = {}){
+      if (!aiChatSelect) return;
+      const previous = options.previousValue ?? aiChatSelect.value ?? '';
+      const source = Array.isArray(list) && list.length ? list : aiSelectFallbackList();
+      console.log('[populateAiChatSelect] rendering options', { incoming: list?.length || 0, source: source.length });
+      aiChatSelect.innerHTML = '<option value="">Select a chat…</option>';
+      (source || []).forEach(chat => {
+        const id = String(chat?.id ?? '').trim();
+        if (!id) return;
+        const title = chat?.title || '(no title)';
+        const parts = [title];
+        if (chat?.username) parts.push(`@${chat.username}`);
+        parts.push(id);
+        aiChatSelect.innerHTML += `<option value="${id}">${parts.join(' • ')}</option>`;
+      });
+      if (previous) {
+        const hasPrev = (source || []).some(chat => String(chat?.id ?? '') === previous);
+        if (hasPrev) aiChatSelect.value = previous;
+      }
+    }
+
+    async function loadCachedChatsForAi({ force = false } = {}){
+      if (!aiChatSelect) return [];
+      
+      const previous = aiChatSelect?.value || '';
+
+      await ensureChatsCache({ silent: true, force });
+
+      if (aiCachedChatsPromise){
+        if (!force){
+          return aiCachedChatsPromise;
+        }
+        try { await aiCachedChatsPromise; } catch (_) {}
+      }
+      
+      if (!force){
+        const fallbackList = aiSelectFallbackList();
+        if (fallbackList.length){
+          console.log('[loadCachedChatsForAi] using fallback list from cache merge', { count: fallbackList.length });
+          aiCachedChats = fallbackList;
+          populateAiChatSelect(aiCachedChats, { previousValue: previous });
+          return aiCachedChats;
+        }
+      }
+
+      aiChatSelect.innerHTML = '<option value="">Loading chats…</option>';
+
+      aiCachedChatsPromise = (async () => {
+        try {
+          const query = force ? '?source=live' : '';
+          const response = await fetch(`/api/cached-chats${query}`, { headers: H.headers() });
+          let payload = await response.json().catch(() => (response.ok ? [] : {}));
+          if (!response.ok){
+            const message = payload?.error || `Server error (${response.status})`;
+            throw new Error(message);
+          }
+
+          let normalized = normalizeLiteChatList(payload);
+
+          if (!normalized.length && !force){
+            try {
+              const liveResponse = await fetch('/api/cached-chats?source=live', { headers: H.headers() });
+              const livePayload = await liveResponse.json().catch(() => (liveResponse.ok ? [] : {}));
+              if (liveResponse.ok){
+                normalized = normalizeLiteChatList(livePayload);
+              } else {
+                console.warn('loadCachedChatsForAi live fallback failed', liveResponse.status, livePayload);
+              }
+            } catch (fallbackErr) {
+              console.warn('loadCachedChatsForAi live fallback error', fallbackErr);
+            }
+          }
+
+          console.log('[loadCachedChatsForAi] normalized payload', { count: normalized.length, sample: normalized[0] });
+          const merged = mergeLiteChatLists(normalized, chatsCache);
+          console.log('[loadCachedChatsForAi] merged list', { count: merged.length, sample: merged[0] });
+          if (merged.length){
+            aiCachedChats = merged;
+          } else if (Array.isArray(chatsCache) && chatsCache.length){
+            aiCachedChats = mergeLiteChatLists(chatsCache, []);
+          } else {
+            aiCachedChats = merged;
+          }
+
+          populateAiChatSelect(aiCachedChats, { previousValue: previous });
+          return aiCachedChats;
+        } catch (err) {
+          console.error('loadCachedChatsForAi error:', err);
+          if (!aiCachedChats.length && Array.isArray(chatsCache) && chatsCache.length){
+            aiCachedChats = mergeLiteChatLists(chatsCache, []);
+          }
+          const fallbackList = aiSelectFallbackList();
+          if (fallbackList.length){
+            populateAiChatSelect(fallbackList, { previousValue: previous });
+          } else if (aiChatSelect){
+            const message = err?.message || 'Failed to load chats';
+            aiChatSelect.innerHTML = `<option value="">${message}</option>`;
+          }
+          throw err;
+        } finally {
+          aiCachedChatsPromise = null;
+        }
+      })();
+
+      return aiCachedChatsPromise;
+    }
+    
+    async function handleAskAi(){
+      const chatId = aiChatSelect?.value || '';
+      const prompt = aiPromptInput?.value.trim() || '';
+      if (!chatId) return alert('Please select a chat');
+      if (!prompt) return alert('Please enter a question or prompt');
+
+      if (aiResult) aiResult.textContent = 'Thinking…';
+      if (askAiBtn) askAiBtn.disabled = true;
+      
+      try {
+        const r = await fetch('/api/ask-ai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...H.headers()
+            
+          },
+          body: JSON.stringify({ chat_id: chatId, prompt })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+                   if (aiResult) aiResult.textContent = `Error (${r.status}): ${data?.error || 'Unknown error'}`;
+        } else {
+          if (aiResult) aiResult.textContent = data?.text || '(No response)';
+        }
+      } catch (e) {
+        if (aiResult) aiResult.textContent = `Error: ${e?.message || e || 'Unknown error'}`;
+      } finally {
+        if (askAiBtn) askAiBtn.disabled = false;
+      }
+    }
+  
+    if (askAiBtn) askAiBtn.addEventListener('click', handleAskAi);
+    if (aiChatSelect) {
+      aiChatSelect.addEventListener('change', resetAiUi);
+      }
+
+      const initialJobs = [];
+      if (typeof loadChats === 'function') initialJobs.push(loadChats());
+      if (typeof loadTimelines === 'function') initialJobs.push(loadTimelines());
+      if (typeof hydrateTasksFromServer === 'function') initialJobs.push(hydrateTasksFromServer());
+      if (aiChatSelect && typeof loadCachedChatsForAi === 'function') {
+        initialJobs.push(loadCachedChatsForAi());
+      }
+
+      if (initialJobs.length){
+        Promise.allSettled(initialJobs).then(results => {
+          const hasError = results.some(result => result.status === 'rejected');
+          if (hasError){
+            console.warn('[initDashboard] one or more initial jobs failed', results);
+            dashboardInitialized = false;
+          }
+        }).catch(err => {
+          console.error('[initDashboard] failed to initialize jobs', err);
+          dashboardInitialized = false;
+        });
+      } else {
+        console.warn('[initDashboard] no initialization jobs were scheduled; allowing retry if needed.');
+        dashboardInitialized = false;
+      }
+
+        setTimeout(() => {
+          requestStatusToolSync('init-delayed');
+            }, 0);
+    }
+
+    function markTelegramReady(){
+      if (telegramReady) return;
+      const tgInstance = window.Telegram?.WebApp;
+      if (tgInstance?.ready){
+        try {
+          tgInstance.ready();
+        } catch (err){
+          console.warn('[bootstrap] Telegram.WebApp.ready threw an error', err);
+        }
+      } else {
+        console.warn('[bootstrap] Telegram WebApp SDK unavailable; proceeding without ready hook.');
+      }
+      telegramReady = true;
+      tgInstance?.expand?.();
+      console.log('[bootstrap] telegramReady flag set', { telegramReady });
+      tryInitializeDashboard('telegram-ready');
+    }
+
+    function handleDomReady(){
+      if (!domReady){
+        domReady = true;
+      }
+     console.log('[bootstrap] DOMContentLoaded handler invoked');
+      initLockScreen();
+      markTelegramReady();
+      tryInitializeDashboard('dom-content-loaded');
+    }
+
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', handleDomReady, { once: true });
+    } else {
+      handleDomReady();
+    }
+  </script>
+</body>
+</html>
